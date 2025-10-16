@@ -5,3 +5,6 @@
 **Professore:** Davide Falessi  
 
 ---
+
+## Bug prediction study — BookKeeper & Storm
+**Repository locale di lavoro per il progetto ML per localizzazione bug.**
