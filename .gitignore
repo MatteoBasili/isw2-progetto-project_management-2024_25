@@ -1,14 +1,3 @@
-# Java / Maven / Gradle
-target/
-
-# IDE
-.vscode/
-.idea/
-*.iml
-
-# Compiled class file
-*.class
-
 # Log file
 *.log
 
