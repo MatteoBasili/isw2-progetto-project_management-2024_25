@@ -1,7 +1,5 @@
 # Java / Maven / Gradle
 target/
-*.class
-*.jar
 
 # IDE
 .vscode/
