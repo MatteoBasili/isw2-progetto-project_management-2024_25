@@ -30,7 +30,7 @@ public class RetrieveTicketsID {
             fileWriter = new FileWriter(outFileName);
             fileWriter.append("TicketID\n");
 
-            // Only gets a max of 1000 at a time, so must do this multiple times if bugs >1000
+            // Only gets a max of 1000 at a time, so must do this multiple times if bugs > 1000
             while (more) {
                 // Get JSON API for closed bugs w/ AV in the project
                 String queryUrl = JIRA_API_SEARCH + "&startAt=" + startAt + "&maxResults=" + maxResults;
