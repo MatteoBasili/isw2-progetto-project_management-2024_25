@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,7 +26,6 @@ public class GetReleaseInfo {
 
     public static void main(String[] args) {
         int i;
-        int numVersions = 0;
 
         try {
             // Reads versions from the JIRA REST service
@@ -48,16 +48,39 @@ public class GetReleaseInfo {
                 }
             }
 
-            numVersions = releases.size();
-
             // Sort by date
             releases.sort(Comparator.naturalOrder());
 
+            // Use only the first half of the releases
+            int half = releases.size() / 2;
+            List<LocalDateTime> firstHalf = new ArrayList<>(releases.subList(0, half));
+
+            // Update maps to contain only the first half
+            HashMap<LocalDateTime, String> filteredReleaseNames = new HashMap<>();
+            HashMap<LocalDateTime, String> filteredReleaseIDs = new HashMap<>();
+
+            for (LocalDateTime dt : firstHalf) {
+                filteredReleaseNames.put(dt, releaseNames.get(dt));
+                filteredReleaseIDs.put(dt, releaseIDs.get(dt));
+            }
+
+            // Replace the original maps with the filtered ones
+            releaseNames.clear();
+            releaseNames.putAll(filteredReleaseNames);
+
+            releaseIDs.clear();
+            releaseIDs.putAll(filteredReleaseIDs);
+
+            // Replace the release list with just the first half
+            releases.clear();
+            releases.addAll(firstHalf);
+
             // Check minimum number of versions
-            if (numVersions < 6) {
-                System.out.println("Number of versions too low (" + numVersions + "). Interrupted.");
+            if (releases.size() < 6) {
+                System.out.println("Number of versions too low (" + releases.size() + "). Interrupted.");
                 return;
             }
+
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error during processing", e);
         }
@@ -67,11 +90,13 @@ public class GetReleaseInfo {
         String outFileName = FileWriterUtils.prepareOutputDataFilePath(fileName);
 
         FileWriter fileWriter = null;
+        int numVersions = 0;
         try {
             fileWriter = new FileWriter(outFileName);
             fileWriter.append("Index,VersionID,Name,Date");
             fileWriter.append("\n");
 
+            numVersions = releases.size();
             for (i = 0; i < numVersions; i++) {
                 int index = i + 1;
                 fileWriter.append(Integer.toString(index));
