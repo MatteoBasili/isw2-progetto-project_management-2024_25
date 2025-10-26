@@ -52,8 +52,12 @@ public class GitMetricsExtractor {
                 }
 
                 LOGGER.log(Level.INFO, "Cloning completed successfully.");
-            } catch (IOException | InterruptedException e) {
+            } catch (IOException e) {
                 throw new GitCloneException("Error cloning repository", e);
+            } catch (InterruptedException e) {
+                // Re-break the thread
+                Thread.currentThread().interrupt();
+                throw new GitCloneException("Thread was interrupted while cloning repository", e);
             }
 
         } else {
@@ -114,14 +118,13 @@ public class GitMetricsExtractor {
     // Function to load all valid JIRA tickets from CSV
     private static Set<String> loadTickets(String ticketsCsvPath) {
         Set<String> tickets = new HashSet<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(ticketsCsvPath))) {
-            // Skip header
-            String headerLine = br.readLine(); // store the header even if we don't use it
 
-            String line;
-            while ((line = br.readLine()) != null) {
-                tickets.add(line.trim());
-            }
+        try (BufferedReader br = new BufferedReader(new FileReader(ticketsCsvPath))) {
+            br.lines()
+                    .skip(1) // skip header
+                    .map(String::trim) // removes leading/trailing whitespace
+                    .filter(line -> !line.isEmpty()) // avoid empty lines
+                    .forEach(tickets::add);
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, e, () -> "Error reading tickets CSV file: " + ticketsCsvPath);
         }
