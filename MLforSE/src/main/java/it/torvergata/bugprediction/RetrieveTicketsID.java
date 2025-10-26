@@ -21,13 +21,11 @@ public class RetrieveTicketsID {
         String fileName = PROJECT_KEY + "_Tickets.csv";
         String outFileName = FileWriterUtils.prepareOutputDataFilePath(fileName);
 
-        FileWriter fileWriter = null;
         int startAt = 0;
         int maxResults = 1000;
         boolean more = true;
 
-        try {
-            fileWriter = new FileWriter(outFileName);
+        try (FileWriter fileWriter = new FileWriter(outFileName)) {
             fileWriter.append("TicketID\n");
 
             // Only gets a max of 1000 at a time, so must do this multiple times if bugs > 1000
@@ -47,17 +45,9 @@ public class RetrieveTicketsID {
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error writing CSV file", e);
-        } finally {
-            try {
-                assert fileWriter != null;
-                fileWriter.flush();
-                fileWriter.close();
-            } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Error flushing/closing CSV writer", e);
-            }
         }
 
-        System.out.println("Tickets saved in " + outFileName);
+        LOGGER.log(Level.INFO, "Tickets saved in {0}", outFileName);
     }
 
 }

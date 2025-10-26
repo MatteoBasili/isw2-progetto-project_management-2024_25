@@ -25,7 +25,6 @@ public class JsonUtils {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) sb.append(line);
-            reader.close();
 
             return new JSONObject(sb.toString());
         } finally {

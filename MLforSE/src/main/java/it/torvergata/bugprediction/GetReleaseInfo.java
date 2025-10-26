@@ -25,14 +25,12 @@ public class GetReleaseInfo {
     private static final ArrayList<LocalDateTime> releases = new ArrayList<>();
 
     public static void main(String[] args) {
-        int i;
-
         try {
             // Reads versions from the JIRA REST service
             JSONObject json = JsonUtils.getJsonObject(new URL(API_URL));
             JSONArray versions = json.getJSONArray("versions");
 
-            for (i = 0; i < versions.length(); i++) {
+            for (int i = 0; i < versions.length(); i++) {
                 String name = "";
                 String id = "";
                 JSONObject v = versions.getJSONObject(i);
@@ -77,7 +75,7 @@ public class GetReleaseInfo {
 
             // Check minimum number of versions
             if (releases.size() < 6) {
-                System.out.println("Number of versions too low (" + releases.size() + "). Interrupted.");
+                LOGGER.log(Level.WARNING, "Number of versions too low ({0}). Interrupted.", releases.size());
                 return;
             }
 
@@ -89,40 +87,30 @@ public class GetReleaseInfo {
         String fileName = PROJECT_KEY + "VersionInfo.csv";
         String outFileName = FileWriterUtils.prepareOutputDataFilePath(fileName);
 
-        FileWriter fileWriter = null;
         int numVersions = 0;
-        try {
-            fileWriter = new FileWriter(outFileName);
-            fileWriter.append("Index,VersionID,Name,Date");
-            fileWriter.append("\n");
+
+        try (FileWriter fileWriter = new FileWriter(outFileName)) {
+            fileWriter.append("Index,VersionID,Name,Date\n");
 
             numVersions = releases.size();
-            for (i = 0; i < numVersions; i++) {
+            for (int i = 0; i < numVersions; i++) {
                 int index = i + 1;
-                fileWriter.append(Integer.toString(index));
-                fileWriter.append(",");
-                fileWriter.append(releaseIDs.get(releases.get(i)));
-                fileWriter.append(",");
-                fileWriter.append(releaseNames.get(releases.get(i)));
-                fileWriter.append(",");
-                fileWriter.append(releases.get(i).toString());
-                fileWriter.append("\n");
+                fileWriter.append(Integer.toString(index))
+                        .append(",")
+                        .append(releaseIDs.get(releases.get(i)))
+                        .append(",")
+                        .append(releaseNames.get(releases.get(i)))
+                        .append(",")
+                        .append(releases.get(i).toString())
+                        .append("\n");
             }
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error writing CSV file", e);
-        } finally {
-            try {
-                assert fileWriter != null;
-                fileWriter.flush();
-                fileWriter.close();
-            } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Error flushing/closing CSV writer", e);
-            }
         }
 
-        System.out.println("Release info saved in " + outFileName);
-        System.out.println("Total valid versions: " + numVersions);
+        LOGGER.log(Level.INFO, "Release info saved in {0}", outFileName);
+        LOGGER.log(Level.INFO, "Total valid versions: {0}", numVersions);
     }
 
     /** Adds a release avoiding duplicates and managing the date */

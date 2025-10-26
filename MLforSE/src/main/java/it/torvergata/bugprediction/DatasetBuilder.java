@@ -16,7 +16,10 @@ public class DatasetBuilder {
     private static final Logger LOGGER = Logger.getLogger(DatasetBuilder.class.getName());
 
     static class Metric {
-        int locAdded = 0, locDeleted = 0, nRev = 0, nFix = 0;
+        int locAdded = 0;
+        int locDeleted = 0;
+        int nRev = 0;
+        int nFix = 0;
         Set<String> authors = new HashSet<>();
         boolean buggy = false;
         LocalDateTime date; // last commit date
@@ -39,109 +42,108 @@ public class DatasetBuilder {
         String project = "bookkeeper";
         String dataDir = "data/";
 
-        // Upload releases
         List<Release> releases = loadReleases(dataDir + "BOOKKEEPERVersionInfo.csv");
+        LocalDateTime maxAllowedDate = computeMaxAllowedDate(releases);
 
-        // Calculate half of the releases
+        Map<String, Metric> metrics = buildMetricsMap(project, dataDir, maxAllowedDate);
+        writeDatasetCSV(project, releases, metrics);
+
+        LOGGER.log(Level.INFO, "Final dataset created for project: {0}", project);
+    }
+
+    private static LocalDateTime computeMaxAllowedDate(List<Release> releases) {
         int half = releases.size() / 2;
-        List<Release> firstHalfReleases = releases.subList(0, half);
+        List<Release> firstHalf = releases.subList(0, half);
+        return firstHalf.get(firstHalf.size() - 1).date;
+    }
 
-        // Maximum allowed commit date
-        LocalDateTime maxAllowedDate = firstHalfReleases.get(firstHalfReleases.size() - 1).date;
+    private static Map<String, Metric> buildMetricsMap(String project, String dataDir, LocalDateTime maxAllowedDate)
+            throws IOException, CsvValidationException {
 
-        // Upload metrics
         Map<String, Metric> map = new HashMap<>();
-        CSVReader reader = new CSVReader(new FileReader(dataDir + project + "_Metrics.csv"));
-        reader.readNext(); // skip header
-        String[] c;
-
-        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z");
-
-        while ((c = reader.readNext()) != null) {
-            String commitDateStr = c[1];
-            LocalDateTime commitDate = parseDate(commitDateStr);
-
-            // Commit filter by prime release period
-            if (commitDate.isAfter(maxAllowedDate)) continue;
-
-            String file = c[3];
-            boolean isFix = c[6].equals("true");
-            int added = c[4].equals("-") ? 0 : Integer.parseInt(c[4]);
-            int deleted = c[5].equals("-") ? 0 : Integer.parseInt(c[5]);
-
-            Metric m = map.getOrDefault(file, new Metric());
-            m.locAdded += added;
-            m.locDeleted += deleted;
-            m.nRev++;
-            if (isFix) {
-                m.nFix++;
-                m.buggy = true;
+        try (CSVReader reader = new CSVReader(new FileReader(dataDir + project + "_Metrics.csv"))) {
+            reader.readNext(); // skip header
+            String[] c;
+            while ((c = reader.readNext()) != null) {
+                processCommitLine(map, c, maxAllowedDate);
             }
-            m.authors.add(c[2]);
-            // Update the date if it is newer
-            if (m.date == null || commitDate.isAfter(m.date))
-                m.date = commitDate;
-
-            // Update derived metrics
-            m.locTouched = m.locAdded + m.locDeleted;
-            m.churn = m.nRev > 0 ? (double) m.locTouched / m.nRev : 0;
-
-            map.put(file, m);
         }
-        reader.close();
+        return map;
+    }
 
-        // Create the CSV file
-        String fileName = project + ".csv";
-        String outFileName = FileWriterUtils.prepareOutputDataFilePath(fileName);
-        FileWriter fileWriter = null;
+    private static void processCommitLine(Map<String, Metric> map, String[] c, LocalDateTime maxAllowedDate) {
+        LocalDateTime commitDate = parseDate(c[1]);
+        if (commitDate.isAfter(maxAllowedDate)) return;
 
-        try {
-            fileWriter = new FileWriter(outFileName);
-            fileWriter.append("Project,Version,File,LOC_Added,LOC_Deleted,LOC_Touched,Churn,NR,NFix,NAuth,Buggy\n");
+        String file = c[3];
+        boolean isFix = c[6].equals("true");
+        int added = c[4].equals("-") ? 0 : Integer.parseInt(c[4]);
+        int deleted = c[5].equals("-") ? 0 : Integer.parseInt(c[5]);
 
-            for (String f : map.keySet()) {
-                Metric m = map.get(f);
+        Metric m = map.getOrDefault(file, new Metric());
+        m.locAdded += added;
+        m.locDeleted += deleted;
+        m.nRev++;
+        if (isFix) {
+            m.nFix++;
+            m.buggy = true;
+        }
+        m.authors.add(c[2]);
+        if (m.date == null || commitDate.isAfter(m.date))
+            m.date = commitDate;
+
+        m.locTouched = m.locAdded + m.locDeleted;
+        m.churn = m.nRev > 0 ? (double) m.locTouched / m.nRev : 0;
+
+        map.put(file, m);
+    }
+
+    private static void writeDatasetCSV(String project, List<Release> releases, Map<String, Metric> map) {
+        String outFileName = FileWriterUtils.prepareOutputDataFilePath(project + ".csv");
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(outFileName))) {
+            writer.write("Project,Version,File,LOC_Added,LOC_Deleted,LOC_Touched,Churn,NR,NFix,NAuth,Buggy\n");
+
+            for (Map.Entry<String, Metric> entry : map.entrySet()) {
+                String f = entry.getKey();
+                Metric m = entry.getValue();
                 String version = findReleaseForDate(releases, m.date);
-                fileWriter.append(project).append(",")
-                        .append(version).append(",")
-                        .append(f).append(",")
-                        .append(String.valueOf(m.locAdded)).append(",")
-                        .append(String.valueOf(m.locDeleted)).append(",")
-                        .append(String.valueOf(m.locTouched)).append(",")
-                        .append(String.format("%.2f", m.churn)).append(",")
-                        .append(String.valueOf(m.nRev)).append(",")
-                        .append(String.valueOf(m.nFix)).append(",")
-                        .append(String.valueOf(m.authors.size())).append(",")
-                        .append(m.buggy ? "Yes" : "No").append("\n");
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error writing CSV file", e);
-        } finally {
-            try {
-                assert fileWriter != null;
-                fileWriter.flush();
-                fileWriter.close();
-            } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Error flushing/closing CSV writer", e);
-            }
-        }
 
-        System.out.println("Final dataset created: " + outFileName);
+                writer.write(String.join(",",
+                        project,
+                        version,
+                        f,
+                        String.valueOf(m.locAdded),
+                        String.valueOf(m.locDeleted),
+                        String.valueOf(m.locTouched),
+                        String.format("%.2f", m.churn),
+                        String.valueOf(m.nRev),
+                        String.valueOf(m.nFix),
+                        String.valueOf(m.authors.size()),
+                        m.buggy ? "Yes" : "No"));
+                writer.newLine();
+            }
+
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error writing CSV file", e);
+        }
     }
 
     // Load all releases sorted by date
     private static List<Release> loadReleases(String csvPath) throws IOException, CsvValidationException {
         List<Release> releases = new ArrayList<>();
-        CSVReader reader = new CSVReader(new FileReader(csvPath));
-        reader.readNext(); // skip header
-        String[] r;
-        while ((r = reader.readNext()) != null) {
-            String name = r[2];
-            String dateStr = r[3];
-            LocalDateTime date = LocalDateTime.parse(dateStr);
-            releases.add(new Release(name, date));
+
+        try (CSVReader reader = new CSVReader(new FileReader(csvPath))) {
+            reader.readNext(); // skip header
+            String[] r;
+            while ((r = reader.readNext()) != null) {
+                String name = r[2];
+                String dateStr = r[3];
+                LocalDateTime date = LocalDateTime.parse(dateStr);
+                releases.add(new Release(name, date));
+            }
         }
-        reader.close();
+
         releases.sort(Comparator.comparing(o -> o.date));
         return releases;
     }
