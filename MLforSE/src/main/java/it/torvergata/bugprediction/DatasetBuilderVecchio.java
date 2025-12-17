@@ -2,24 +2,19 @@ package it.torvergata.bugprediction;
 
 import it.torvergata.bugprediction.config.ConfigLoader;
 import it.torvergata.bugprediction.exceptions.GitCloneException;
-import it.torvergata.bugprediction.git.GitCommitRetriever;
 import it.torvergata.bugprediction.jira.JiraReleaseRetriever;
 import it.torvergata.bugprediction.jira.JiraTicketRetriever;
-import it.torvergata.bugprediction.metrics.MetricsCalculator;
-import it.torvergata.bugprediction.model.Commit;
-import it.torvergata.bugprediction.model.FileMetrics;
 import it.torvergata.bugprediction.model.Release;
 import it.torvergata.bugprediction.model.Ticket;
 import it.torvergata.bugprediction.utils.GitUtils;
-import org.json.*;
 
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class DatasetBuilder {
+public class DatasetBuilderVecchio {
 
-    private static final Logger LOGGER = Logger.getLogger(DatasetBuilder.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(DatasetBuilderVecchio.class.getName());
 
     public static void main(String[] args) throws GitCloneException {
         String project = ConfigLoader.loadProjectName();
