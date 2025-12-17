@@ -32,4 +32,17 @@ public class JsonUtils {
         }
     }
 
+    /**
+     * Reads the content of a URL and returns it as a String.
+     */
+    public static String readUrl(URL url) throws Exception {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line);
+            }
+            return sb.toString();
+        }
+    }
 }

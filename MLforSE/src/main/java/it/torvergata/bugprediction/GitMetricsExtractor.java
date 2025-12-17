@@ -1,6 +1,7 @@
 package it.torvergata.bugprediction;
 
-import it.torvergata.bugprediction.utils.FileWriterUtils;
+import it.torvergata.bugprediction.exceptions.GitCloneException;
+import it.torvergata.bugprediction.utils.DataUtils;
 
 import java.io.*;
 import java.util.*;
@@ -23,7 +24,7 @@ public class GitMetricsExtractor {
         Set<String> validTickets = loadTickets("data/" + projectName + "_Tickets.csv");
         String ticketPrefix = projectName.toUpperCase() + "-";
 
-        String outFileName = FileWriterUtils.prepareOutputDataFilePath(projectName + "_Metrics.csv");
+        String outFileName = DataUtils.prepareOutputDataFilePath(projectName + "_Metrics.csv");
         extractGitMetrics(projectPath, outFileName, validTickets, ticketPrefix);
 
         LOGGER.log(Level.INFO, "Metrics extracted in {0}", outFileName);
@@ -55,7 +56,6 @@ public class GitMetricsExtractor {
             } catch (IOException e) {
                 throw new GitCloneException("Error cloning repository", e);
             } catch (InterruptedException e) {
-                // Re-break the thread
                 Thread.currentThread().interrupt();
                 throw new GitCloneException("Thread was interrupted while cloning repository", e);
             }
@@ -68,7 +68,7 @@ public class GitMetricsExtractor {
     private static void extractGitMetrics(String projectPath, String outFileName,
                                           Set<String> validTickets, String ticketPrefix) {
         try (FileWriter fileWriter = new FileWriter(outFileName)) {
-            fileWriter.append("CommitID,Date,Author,File,LOC_Added,LOC_Deleted,TicketLinked\n");
+            fileWriter.append("CommitID,Date,Author,File,LOC_Added,LOC_Deleted,TicketLinked,IsFix,ChgSetSize\n");
 
             ProcessBuilder pb = new ProcessBuilder("git", "-C", projectPath,
                     "log", "--numstat", "--date=iso", "--pretty=format:COMMIT:%H;%ad;%an;%s");
@@ -82,36 +82,64 @@ public class GitMetricsExtractor {
                 String author = "";
                 String message;
                 boolean ticketLinked = false;
+                boolean isFix = false;
+                List<String[]> currentFiles = new ArrayList<>();
 
                 while ((line = reader.readLine()) != null) {
                     if (line.startsWith("COMMIT:")) {
+                        // Flush previous commit data
+                        if (!currentFiles.isEmpty() && !currentCommit.isEmpty()) {
+                            writeCommitData(fileWriter, currentCommit, date, author, currentFiles, ticketLinked, isFix);
+                            currentFiles.clear();
+                        }
+
+                        // Start a new commit
                         String[] parts = line.split(";", 4);
                         currentCommit = parts[0].split(":")[1];
                         date = parts[1];
                         author = parts[2];
-                        message = parts[3];
+                        message = parts.length >= 4 ? parts[3].trim() : "";
 
                         String finalMessage = message;
                         ticketLinked = validTickets.stream()
                                 .anyMatch(ticket -> finalMessage.contains(ticketPrefix + ticket));
+                        isFix = message.toLowerCase().contains("fix") || ticketLinked;
 
                     } else if (!line.trim().isEmpty()) {
                         String[] parts = line.split("\t");
                         if (parts.length == 3 && parts[2].endsWith(".java")) {
-                            fileWriter.append(currentCommit).append(",")
-                                    .append(date).append(",")
-                                    .append("\"").append(author).append("\"").append(",")
-                                    .append("\"").append(parts[2]).append("\"").append(",")
-                                    .append(parts[0]).append(",")
-                                    .append(parts[1]).append(",")
-                                    .append(String.valueOf(ticketLinked)).append("\n");
+                            currentFiles.add(parts);
                         }
                     }
                 }
+
+                // Handle last commit
+                if (!currentFiles.isEmpty() && !currentCommit.isEmpty()) {
+                    writeCommitData(fileWriter, currentCommit, date, author, currentFiles, ticketLinked, isFix);
+                }
             }
+
+            process.waitFor();
 
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error writing CSV file", e);
+        }
+    }
+
+    private static void writeCommitData(FileWriter fileWriter, String commitId, String date,
+                                        String author, List<String[]> files,
+                                        boolean ticketLinked, boolean isFix) throws IOException {
+        int chgSetSize = files.size();
+        for (String[] fileData : files) {
+            fileWriter.append(commitId).append(",")
+                    .append(date).append(",")
+                    .append("\"").append(author).append("\"").append(",")
+                    .append("\"").append(fileData[2]).append("\"").append(",")
+                    .append(fileData[0]).append(",")
+                    .append(fileData[1]).append(",")
+                    .append(String.valueOf(ticketLinked)).append(",")
+                    .append(String.valueOf(isFix)).append(",")
+                    .append(String.valueOf(chgSetSize)).append("\n");
         }
     }
 

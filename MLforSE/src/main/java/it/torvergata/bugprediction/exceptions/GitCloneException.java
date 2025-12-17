@@ -1,4 +1,4 @@
-package it.torvergata.bugprediction;
+package it.torvergata.bugprediction.exceptions;
 
 public class GitCloneException extends Exception {
     public GitCloneException(String message) {

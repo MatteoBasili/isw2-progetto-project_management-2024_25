@@ -3,11 +3,11 @@ package it.torvergata.bugprediction.utils;
 import java.io.File;
 import java.util.logging.Logger;
 
-public class FileWriterUtils {
+public class DataUtils {
 
-    private static final Logger LOGGER = Logger.getLogger(FileWriterUtils.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(DataUtils.class.getName());
 
-    private FileWriterUtils() {}
+    private DataUtils() {}
 
     /**
      * Returns the path to the output file.
@@ -35,5 +35,4 @@ public class FileWriterUtils {
 
         return outFileName;
     }
-
 }
