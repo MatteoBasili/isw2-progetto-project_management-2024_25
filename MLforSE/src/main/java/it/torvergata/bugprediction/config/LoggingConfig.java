@@ -11,15 +11,15 @@ public final class LoggingConfig {
 
     /**
      * Configura il logger root per tutta l'applicazione:
-     * - scrive su stdout
+     * - output su stdout
      * - output pulito (solo messaggio)
      * - flush immediato
-     * - livello ALL
+     * - livello INFO per evitare rumore di sistema
      */
     public static void configure() {
         Logger rootLogger = Logger.getLogger("");
 
-        // Rimuove handler di default (ConsoleHandler su stderr)
+        // Rimuove handler di default (stderr)
         for (Handler handler : rootLogger.getHandlers()) {
             rootLogger.removeHandler(handler);
         }
@@ -38,8 +38,16 @@ public final class LoggingConfig {
             }
         };
 
-        stdoutHandler.setLevel(Level.ALL);
+        stdoutHandler.setLevel(Level.INFO);
         rootLogger.addHandler(stdoutHandler);
-        rootLogger.setLevel(Level.ALL);
+        rootLogger.setLevel(Level.INFO);
+
+        // =========================
+        // Silenzia logger JVM / JMX
+        // =========================
+        Logger.getLogger("javax.management").setLevel(Level.SEVERE);
+        Logger.getLogger("sun.management").setLevel(Level.SEVERE);
+        Logger.getLogger("com.sun").setLevel(Level.SEVERE);
+        Logger.getLogger("java.lang").setLevel(Level.SEVERE);
     }
 }

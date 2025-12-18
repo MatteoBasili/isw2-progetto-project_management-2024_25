@@ -10,4 +10,4 @@ target/
 *.ipr
 
 ### Projects ###
-projects/
+repos/

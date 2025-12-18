@@ -32,8 +32,13 @@ public class ConfigLoader {
             return properties.getProperty(PROJECT_KEY, DEFAULT_PROJECT);
         } catch (IOException e) {
             LOGGER.log(
-                    Level.CONFIG,
-                    "Impossibile leggere il file config.properties. Verrà utilizzato il valore di default PROJECT = BOOKKEEPER",
+                    Level.WARNING,
+                    String.format(
+                            "[ATTENZIONE!] Impossibile leggere il file %s. Verrà utilizzato il valore di default: %s = %s",
+                            CONFIG_FILE,
+                            PROJECT_KEY,
+                            DEFAULT_PROJECT
+                    ),
                     e
             );
             return DEFAULT_PROJECT;

@@ -8,9 +8,9 @@ import it.torvergata.bugprediction.utils.Utils;
 import java.util.Scanner;
 import java.util.logging.Logger;
 
-public class Launcher {
+public class MLSELauncher {
 
-    private static final Logger LOGGER = Logger.getLogger(Launcher.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(MLSELauncher.class.getName());
 
     public static void main(String[] args) {
         // Configura logging per tutta l'applicazione
@@ -28,11 +28,11 @@ public class Launcher {
                     buildDataset();
                     break;
                 case "0":
-                    LOGGER.info("Uscita dal programma. Arrivederci!");
                     exit = true;
+                    LOGGER.info("Uscita dal programma. Arrivederci!");
                     break;
                 default:
-                    LOGGER.warning("[ATTENZIONE!] Opzione non valida. Riprova.");
+                    LOGGER.info("Opzione non valida. Riprova.");
             }
         }
 
@@ -45,9 +45,9 @@ public class Launcher {
     private static void printMenu() {
         LOGGER.info("""
                 
-                =========================
-                      LAUNCHER MENU
-                =========================
+                ==============================
+                      MLSE LAUNCHER MENU
+                ==============================
                 
                 1. Costruisci il dataset del progetto
                 0. Esci
@@ -59,10 +59,15 @@ public class Launcher {
         String projectName = ConfigLoader.loadProjectName();
         Utils.logSeparator("Costruzione del dataset di " + projectName, LOGGER);
 
+        LOGGER.info("Avvio\n");
         DatasetBuilder datasetBuilder = new DatasetBuilder();
-        datasetBuilder.build(projectName);
+        int ret = datasetBuilder.build(projectName);
+        if (ret == 0) {
+            LOGGER.info("\nDataset costruito correttamente");
+        } else {
+            LOGGER.severe("\n[ERRORE] Errore durante la costruzione del dataset");
+        }
 
-        LOGGER.info("Dataset costruito correttamente!");
         Utils.logSeparator("", LOGGER);
     }
 
