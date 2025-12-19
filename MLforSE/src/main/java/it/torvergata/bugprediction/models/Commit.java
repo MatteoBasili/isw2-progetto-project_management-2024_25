@@ -29,12 +29,23 @@ public class Commit {
         return revCommit;
     }
 
+    public Ticket getTicket() {
+        return ticket;
+    }
+
     public Release getRelease() {
         return release;
     }
 
     public void setTicket(Ticket ticket) {
         this.ticket = ticket;
+    }
+
+    public Commit cloneCommitAtRelease(Release release) {
+        Commit commit = new Commit(revCommit, release);
+        commit.setTicket(ticket);
+
+        return commit;
     }
 
 }

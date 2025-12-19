@@ -3,8 +3,12 @@ package it.torvergata.bugprediction.controllers;
 import it.torvergata.bugprediction.infrastructure.git.GitRepositoryMiner;
 import it.torvergata.bugprediction.infrastructure.jira.JiraExtractor;
 import it.torvergata.bugprediction.models.Commit;
+import it.torvergata.bugprediction.models.ProjectClass;
 import it.torvergata.bugprediction.models.Release;
 import it.torvergata.bugprediction.models.Ticket;
+import it.torvergata.bugprediction.processors.metrics.MetricsProcessor;
+import it.torvergata.bugprediction.processors.sets.TrainingTestSetsProcessor;
+import it.torvergata.bugprediction.utils.Utils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -23,7 +27,7 @@ public class DatasetBuilder {
     }
 
     /**
-     * Costruisce il dataset del progetto.
+     * Costruisce i dataset del progetto.
      * @param projectName nome del progetto
      * @return 0 se successo, 1 se errore
      */
@@ -48,13 +52,47 @@ public class DatasetBuilder {
             // Prendi metà delle release
             List<Release> datasetReleases = jiraReleases.subList(0, jiraReleases.size()/2);
 
-            // Get a clone of all tickets proportioned to use in the training set
+            // Ottieni un clone di tutti i ticket proporzionati per l'uso nel training set
             List<Ticket> allTickets = getAllTicketsProportioned(jiraReleases, ticketList, projectName);
             applyFilters(allTickets, commitList);
 
-            // CONTINUA
+            logger.info("Avvio del walk forward per costruire i set di addestramento e di test...");
+            TrainingTestSetsProcessor trainingTestSetsProcessor = new TrainingTestSetsProcessor();
+            for (Release currentRelease: datasetReleases){
+                // Salta la prima release
+                if(currentRelease.getNumericID() == 1)
+                    continue;
 
-            //TrainingTestSetsProcessor setsProcessor = new TrainingTestSetsProcessor();
+                Utils.printLine(logger);
+
+                // Log per indicare il passo corrente
+                int step = currentRelease.getNumericID() - 1; // perché saltiamo la prima
+                int totalSteps = datasetReleases.size() - 1;  // totale release da processare
+                logger.info("Passo " + step + " su " + totalSteps + ": elaborazione release "
+                        + currentRelease.getNumericID() + " (" + currentRelease.getReleaseName() + ")\n");
+
+                List<Release> consideringReleases = getConsideringReleases(datasetReleases, currentRelease);
+                List<Ticket> consideringTickets = getConsideringTickets(ticketList, currentRelease);
+                List<Commit> consideringCommits = getConsideringCommits(commitList, currentRelease);
+                List<Commit> consideringTicketedCommits = applyFilters(consideringTickets, consideringCommits);
+
+                // Regola le informazioni dei ticket impostando le loro IV con proporzione
+                Ticket.proportionTickets(consideringTickets, consideringReleases, projectName);
+                consideringTickets.sort(Comparator.comparing(Ticket::getResolutionDate));
+
+                logger.info("Estrazione delle classi toccate...");
+                // Utilizza l'intero elenco di commit per non perdere l'ultimo commit di una release per leggere le relative classi
+                List<ProjectClass> classList = gitRepoMiner.extractClasses(consideringReleases, consideringCommits);
+
+                logger.info("Estrazione delle metriche...\n");
+                MetricsProcessor metricsProcessor = new MetricsProcessor(consideringReleases, consideringTicketedCommits,
+                        classList, gitRepoMiner, projectName);
+                metricsProcessor.processMetrics();
+
+                trainingTestSetsProcessor.processWalkForwardIteration(gitRepoMiner, consideringReleases, consideringTickets, allTickets, classList, projectName);
+            }
+
+            Utils.printLine(logger);
 
             return 0;
 
@@ -66,6 +104,53 @@ public class DatasetBuilder {
             gitRepoMiner.close(); // chiudi Git e Repository
             }
         }
+    }
+
+    private List<Release> getConsideringReleases(List<Release> jiraReleases, Release currentRelease) {
+        return jiraReleases
+                .stream()
+                .filter(r-> r.getNumericID() <= currentRelease.getNumericID())
+                .toList();
+    }
+
+    /**
+     * L'elenco dei ticket da considerare in una determinata release è composto dalla visualizzazione dei ticket
+     * che erano disponibili in quella release
+     * @param ticketList tutti i ticket disponibili
+     * @param currentRelease la release da considerare come punto di vista dei ticket
+     * @return ticket con OV <= currentRelease
+     */
+    private List<Ticket> getConsideringTickets(List<Ticket> ticketList, Release currentRelease) {
+        List<Ticket> consideringTicketList = ticketList
+                .stream()
+                .filter(t -> t.getOpeningVersion().getNumericID() <= currentRelease.getNumericID())
+                .toList();
+
+        List<Ticket> returningTicketList = new ArrayList<>();
+
+        for (Ticket ticket: consideringTicketList) {
+            Ticket newTicket = ticket.cloneTicketAtRelease(currentRelease);
+            if (newTicket == null) continue;
+            returningTicketList.add(newTicket);
+        }
+
+        return returningTicketList;
+    }
+
+    private List<Commit> getConsideringCommits(List<Commit> commitList, Release currentRelease) {
+        List<Commit> consideringCommitList = commitList
+                .stream()
+                .filter(c -> c.getRelease().getNumericID() <= currentRelease.getNumericID())
+                .toList();
+
+        List<Commit> returningCommitList = new ArrayList<>();
+
+        for (Commit commit: consideringCommitList) {
+            Commit newCommit = commit.cloneCommitAtRelease(commit.getRelease());
+            returningCommitList.add(newCommit);
+        }
+
+        return returningCommitList;
     }
 
     private void setReleasesNumericID(List<Release> releaseList) {

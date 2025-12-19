@@ -49,7 +49,7 @@ public class MLSELauncher {
                       MLSE LAUNCHER MENU
                 ==============================
                 
-                1. Costruisci il dataset del progetto
+                1. Costruisci i dataset del progetto
                 0. Esci
                 
                 Seleziona un'opzione:""");
@@ -57,15 +57,15 @@ public class MLSELauncher {
 
     private static void buildDataset() {
         String projectName = ConfigLoader.loadProjectName();
-        Utils.logSeparator("Costruzione del dataset di " + projectName, LOGGER);
+        Utils.logSeparator("Costruzione dei dataset di " + projectName, LOGGER);
 
         LOGGER.info("Avvio\n");
         DatasetBuilder datasetBuilder = new DatasetBuilder();
         int ret = datasetBuilder.build(projectName);
         if (ret == 0) {
-            LOGGER.info("\nDataset costruito correttamente");
+            LOGGER.info("\nDataset costruiti correttamente");
         } else {
-            LOGGER.severe("\n[ERRORE] Errore durante la costruzione del dataset");
+            LOGGER.severe("\n[ERRORE] Errore durante la costruzione dei dataset");
         }
 
         Utils.logSeparator("", LOGGER);
