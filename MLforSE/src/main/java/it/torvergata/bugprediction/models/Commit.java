@@ -33,4 +33,8 @@ public class Commit {
         return release;
     }
 
+    public void setTicket(Ticket ticket) {
+        this.ticket = ticket;
+    }
+
 }
