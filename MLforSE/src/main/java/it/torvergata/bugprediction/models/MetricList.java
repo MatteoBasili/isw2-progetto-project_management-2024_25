@@ -2,9 +2,9 @@ package it.torvergata.bugprediction.models;
 
 public class MetricList {
 
+    private final LOCMetrics addedLOCMetrics;
     private final LOCMetrics removedLOCMetrics;
     private final LOCMetrics churnMetrics;
-    private final LOCMetrics addedLOCMetrics;
 
     private boolean bugged;
     private int size;

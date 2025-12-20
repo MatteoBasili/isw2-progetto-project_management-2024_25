@@ -1,6 +1,6 @@
 package it.torvergata.bugprediction.processors.metrics;
 
-import it.torvergata.bugprediction.infrastructure.git.GitRepositoryMiner;
+import it.torvergata.bugprediction.datasource.git.GitRepositoryAnalyzer;
 import it.torvergata.bugprediction.models.*;
 import org.eclipse.jgit.revwalk.RevCommit;
 
@@ -12,12 +12,12 @@ public class MetricsProcessor {
 
     List<Release> releaseList;
     List<Commit> ticketedCommitList;
-    List<ProjectClass> classList;
-    GitRepositoryMiner gitRepoMiner;
+    List<ReleaseClass> classList;
+    GitRepositoryAnalyzer gitRepoMiner;
     String projName;
 
-    public MetricsProcessor(List<Release> releaseList, List<Commit> ticketedCommitList, List<ProjectClass> classList,
-                            GitRepositoryMiner gitRepoMiner, String projName) {
+    public MetricsProcessor(List<Release> releaseList, List<Commit> ticketedCommitList, List<ReleaseClass> classList,
+                            GitRepositoryAnalyzer gitRepoMiner, String projName) {
         this.releaseList = releaseList;
         this.ticketedCommitList = ticketedCommitList;
         this.classList = classList;
@@ -34,14 +34,14 @@ public class MetricsProcessor {
     }
 
     private void processSize() {
-        for (ProjectClass currentClass : classList) {
+        for (ReleaseClass currentClass : classList) {
             String[] lines = currentClass.getContentOfClass().split("\r\n|\r|\n");
             currentClass.getMetrics().setSize(lines.length);
         }
     }
 
     private void processNumberOfRevisions() {
-        for (ProjectClass currentClass : classList) {
+        for (ReleaseClass currentClass : classList) {
             currentClass.getMetrics().setNumberOfRevisions(currentClass.getTouchingClassCommitList().size());
         }
     }
@@ -51,11 +51,11 @@ public class MetricsProcessor {
      * modificano la classe
      */
     private void processNumberOfDefectFixes() {
-        for (ProjectClass projectClass : classList) {
+        for (ReleaseClass releaseClass : classList) {
             // Inizializza una lista vuota di ticket che rappresentano i bug che hanno coinvolto la classe
             List<Ticket> classBugs = new ArrayList<>();
 
-            for (Commit touchingClassCommit : projectClass.getTouchingClassCommitList()) {
+            for (Commit touchingClassCommit : releaseClass.getTouchingClassCommitList()) {
                 // Se il commit fa riferimento a un ticket non ancora considerato nel conteggio dei bug
                 if (!classBugs.contains(touchingClassCommit.getTicket()) && ticketedCommitList.contains(touchingClassCommit)) {
                     // Aggiungi il ticket alla lista dei bug per quella classe
@@ -63,27 +63,27 @@ public class MetricsProcessor {
                 }
             }
             // Il numero di correzioni di bug per la classe è il numero di ticket che hanno coinvolto quella classe
-            projectClass.getMetrics().setNumberOfDefectFixes(classBugs.size());
+            releaseClass.getMetrics().setNumberOfDefectFixes(classBugs.size());
         }
     }
 
     private void processNumberOfAuthors() {
-        for (ProjectClass projectClass : classList) {
+        for (ReleaseClass releaseClass : classList) {
             List<String> authorsOfClass = new ArrayList<>();
-            for (Commit commit : projectClass.getTouchingClassCommitList()) {
+            for (Commit commit : releaseClass.getTouchingClassCommitList()) {
                 RevCommit revCommit = commit.getRevCommit();
                 if (!authorsOfClass.contains(revCommit.getAuthorIdent().getName())) {
                     authorsOfClass.add(revCommit.getAuthorIdent().getName());
                 }
             }
-            projectClass.getMetrics().setNumberOfAuthors(authorsOfClass.size());
+            releaseClass.getMetrics().setNumberOfAuthors(authorsOfClass.size());
         }
     }
 
     private void processLOCMetrics() throws IOException {
         // Le metriche max, avg e il valore attuale sono zero di default
         int i;
-        for (ProjectClass currentClass : classList) {
+        for (ReleaseClass currentClass : classList) {
             LOCMetrics removedLOC = new LOCMetrics();
             LOCMetrics churnLOC = new LOCMetrics();
             LOCMetrics addedLOC = new LOCMetrics();
@@ -123,7 +123,7 @@ public class MetricsProcessor {
         }
     }
 
-    private void processAverageLOCMetrics(ProjectClass currentClass, List<Integer> locAddedByClass, List<Integer> locRemovedByClass,
+    private void processAverageLOCMetrics(ReleaseClass currentClass, List<Integer> locAddedByClass, List<Integer> locRemovedByClass,
                                           LOCMetrics addedLOC, LOCMetrics removedLOC, LOCMetrics churnLOC){
         // Imposta i valori medi
         int nRevisions = currentClass.getMetrics().getNumberOfRevisions();

@@ -1,8 +1,8 @@
-package it.torvergata.bugprediction.processors.sets;
+package it.torvergata.bugprediction.processors.datasets;
 
 import it.torvergata.bugprediction.enums.DatasetType;
 import it.torvergata.bugprediction.enums.OutputFileType;
-import it.torvergata.bugprediction.models.ProjectClass;
+import it.torvergata.bugprediction.models.ReleaseClass;
 import it.torvergata.bugprediction.models.Release;
 import it.torvergata.bugprediction.utils.FileWriterUtils;
 
@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.logging.Logger;
 
-import static it.torvergata.bugprediction.controllers.DatasetBuilder.RESULT_DIRECTORY_NAME;
+import static it.torvergata.bugprediction.controllers.DatasetsBuilder.RESULTS_DIR;
 
 public class DatasetsProcessor {
 
@@ -21,11 +21,11 @@ public class DatasetsProcessor {
 
     private DatasetsProcessor() {}
 
-    public static void writeDataset(String projName, List<Release> releaseList, List<ProjectClass> classList, int iterationNumber,
+    public static void writeDataset(String projName, List<Release> releaseList, List<ReleaseClass> classList, int iterationNumber,
                                     DatasetType datasetType, OutputFileType extension) throws IOException {
         StringBuilder projNameDelimited = new StringBuilder(projName.toLowerCase()).append("/");
         StringBuilder datasetTypeDelimited = new StringBuilder(datasetType.getId().toLowerCase()).append("/");
-        StringBuilder pathname = new StringBuilder(RESULT_DIRECTORY_NAME).append(projNameDelimited)
+        StringBuilder pathname = new StringBuilder(RESULTS_DIR).append(projNameDelimited)
                 .append(extension.getId().toLowerCase()).append("Files/").append(datasetType.getId().toLowerCase());
         File file = new File(pathname.toString());
         if (!file.exists() && !file.mkdirs())  throw new IOException();
@@ -33,7 +33,7 @@ public class DatasetsProcessor {
         StringBuilder fileName = new StringBuilder();
         fileName.append(projName.toLowerCase()).append("_").append(datasetType.getId().toLowerCase()).append("Set").append(iterationNumber)
                 .append(".").append(extension.getId().toLowerCase());
-        pathname = new StringBuilder(RESULT_DIRECTORY_NAME).append(projNameDelimited)
+        pathname = new StringBuilder(RESULTS_DIR).append(projNameDelimited)
                 .append(extension.getId().toLowerCase()).append("Files/").append(datasetTypeDelimited).append(fileName);
         file = new File(pathname.toString());
 
@@ -42,20 +42,20 @@ public class DatasetsProcessor {
         }
     }
 
-    private static void appendOnFile(List<Release> releaseList, List<ProjectClass> allProjectClasses, boolean isArff, String fileName, FileWriter fileWriter) throws IOException {
+    private static void appendOnFile(List<Release> releaseList, List<ReleaseClass> allReleaseClasses, boolean isArff, String fileName, FileWriter fileWriter) throws IOException {
         if(isArff){
             fileWriter.append("@relation ").append(fileName).append("\n\n")
                     .append("""
                         @attribute SIZE numeric
                         @attribute LOC_ADDED numeric
-                        @attribute LOC_ADDED_AVG numeric
-                        @attribute LOC_ADDED_MAX numeric
+                        @attribute AVG_LOC_ADDED numeric
+                        @attribute MAX_LOC_ADDED numeric
                         @attribute LOC_REMOVED numeric
-                        @attribute LOC_REMOVED_AVG numeric
-                        @attribute LOC_REMOVED_MAX numeric
+                        @attribute AVG_LOC_REMOVED numeric
+                        @attribute MAX_LOC_REMOVED numeric
                         @attribute CHURN numeric
-                        @attribute CHURN_AVG numeric
-                        @attribute CHURN_MAX numeric
+                        @attribute AVG_CHURN numeric
+                        @attribute MAX_CHURN numeric
                         @attribute NUMBER_OF_REVISIONS numeric
                         @attribute NUMBER_OF_DEFECT_FIXES numeric
                         @attribute NUMBER_OF_AUTHORS numeric
@@ -63,51 +63,51 @@ public class DatasetsProcessor {
                         
                         @data
                         """);
-            appendByRelease(releaseList, allProjectClasses, fileWriter, true);
+            appendByRelease(releaseList, allReleaseClasses, fileWriter, true);
         }else{
             fileWriter.append(
                     "RELEASE_ID," +
                             "FILE_NAME," +
                             "SIZE," +
-                            "LOC_ADDED,LOC_ADDED_AVG,LOC_ADDED_MAX," +
-                            "LOC_REMOVED,LOC_REMOVED_AVG,LOC_REMOVED_MAX," +
-                            "CHURN,CHURN_AVG,CHURN_MAX," +
+                            "LOC_ADDED,AVG_LOC_ADDED,MAX_LOC_ADDED," +
+                            "LOC_REMOVED,AVG_LOC_REMOVED,MAX_LOC_REMOVED," +
+                            "CHURN,AVG_CHURN,MAX_CHURN," +
                             "NUMBER_OF_REVISIONS," +
                             "NUMBER_OF_DEFECT_FIXES," +
                             "NUMBER_OF_AUTHORS," +
                             "IS_BUGGY").append("\n");
-            appendByRelease(releaseList, allProjectClasses, fileWriter, false);
+            appendByRelease(releaseList, allReleaseClasses, fileWriter, false);
         }
         FileWriterUtils.flushAndCloseFW(fileWriter, logger, NAME_OF_THIS_CLASS);
     }
 
-    private static void appendByRelease(List<Release> releaseList, List<ProjectClass> allProjectClasses, FileWriter fileWriter, boolean isArff) throws IOException {
+    private static void appendByRelease(List<Release> releaseList, List<ReleaseClass> allReleaseClasses, FileWriter fileWriter, boolean isArff) throws IOException {
         for (Release release : releaseList) {
-            for (ProjectClass projectClass : allProjectClasses) {
-                if (projectClass.getRelease().getNumericID() == release.getNumericID()) {
-                    appendEntriesLikeCSV(fileWriter, release, projectClass, isArff);
+            for (ReleaseClass releaseClass : allReleaseClasses) {
+                if (releaseClass.getRelease().getNumericId() == release.getNumericId()) {
+                    appendEntriesLikeCSV(fileWriter, release, releaseClass, isArff);
                 }
             }
         }
     }
 
-    private static void appendEntriesLikeCSV(FileWriter fileWriter, Release release, ProjectClass projectClass, boolean isArff) throws IOException {
-        String releaseID = Integer.toString(release.getNumericID());
-        String className = projectClass.getName();
-        String sizeOfClass = String.valueOf(projectClass.getMetrics().getSize());
-        String addedLOC = String.valueOf(projectClass.getMetrics().getAddedLOCMetrics().getVal());
-        String avgAddedLOC = String.valueOf(projectClass.getMetrics().getAddedLOCMetrics().getAvgVal());
-        String maxAddedLOC = String.valueOf(projectClass.getMetrics().getAddedLOCMetrics().getMaxVal());
-        String removedLOC = String.valueOf(projectClass.getMetrics().getRemovedLOCMetrics().getVal());
-        String avgRemovedLOC = String.valueOf(projectClass.getMetrics().getRemovedLOCMetrics().getAvgVal());
-        String maxRemovedLOC = String.valueOf(projectClass.getMetrics().getRemovedLOCMetrics().getMaxVal());
-        String churn = String.valueOf(projectClass.getMetrics().getChurnMetrics().getVal());
-        String avgChurn = String.valueOf(projectClass.getMetrics().getChurnMetrics().getAvgVal());
-        String maxChurn = String.valueOf(projectClass.getMetrics().getChurnMetrics().getMaxVal());
-        String nRevisions = String.valueOf(projectClass.getMetrics().getNumberOfRevisions());
-        String nDefectFixes = String.valueOf(projectClass.getMetrics().getNumberOfDefectFixes());
-        String nAuthors = String.valueOf(projectClass.getMetrics().getNumberOfAuthors());
-        String isClassBugged = projectClass.getMetrics().getBuggyness() ? "YES" : "NO" ;
+    private static void appendEntriesLikeCSV(FileWriter fileWriter, Release release, ReleaseClass releaseClass, boolean isArff) throws IOException {
+        String releaseID = Integer.toString(release.getNumericId());
+        String className = releaseClass.getName();
+        String sizeOfClass = String.valueOf(releaseClass.getMetrics().getSize());
+        String addedLOC = String.valueOf(releaseClass.getMetrics().getAddedLOCMetrics().getVal());
+        String avgAddedLOC = String.valueOf(releaseClass.getMetrics().getAddedLOCMetrics().getAvgVal());
+        String maxAddedLOC = String.valueOf(releaseClass.getMetrics().getAddedLOCMetrics().getMaxVal());
+        String removedLOC = String.valueOf(releaseClass.getMetrics().getRemovedLOCMetrics().getVal());
+        String avgRemovedLOC = String.valueOf(releaseClass.getMetrics().getRemovedLOCMetrics().getAvgVal());
+        String maxRemovedLOC = String.valueOf(releaseClass.getMetrics().getRemovedLOCMetrics().getMaxVal());
+        String churn = String.valueOf(releaseClass.getMetrics().getChurnMetrics().getVal());
+        String avgChurn = String.valueOf(releaseClass.getMetrics().getChurnMetrics().getAvgVal());
+        String maxChurn = String.valueOf(releaseClass.getMetrics().getChurnMetrics().getMaxVal());
+        String nRevisions = String.valueOf(releaseClass.getMetrics().getNumberOfRevisions());
+        String nDefectFixes = String.valueOf(releaseClass.getMetrics().getNumberOfDefectFixes());
+        String nAuthors = String.valueOf(releaseClass.getMetrics().getNumberOfAuthors());
+        String isClassBugged = releaseClass.getMetrics().getBuggyness() ? "YES" : "NO" ;
 
         if(!isArff){
             fileWriter.append(releaseID).append(",")

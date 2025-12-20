@@ -1,9 +1,5 @@
 package it.torvergata.bugprediction.models;
 
-import it.torvergata.bugprediction.processors.proportion.IProportionProcessor;
-import it.torvergata.bugprediction.processors.proportion.IncrementProportionProcessor;
-
-import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -98,21 +94,15 @@ public class Ticket {
         }
     }
 
-    public Ticket cloneTicketAtRelease(Release release) {
+    public Ticket cloneAtRelease(Release release) {
         List<Release> newAffectedVersions = affectedVersions
                 .stream()
-                .filter(av -> av.getNumericID() <= release.getNumericID())
+                .filter(av -> av.getNumericId() <= release.getNumericId())
                 .toList();
-        Release newFixedVersion = fixedVersion.getNumericID() <= release.getNumericID() ? fixedVersion : null;
+        Release newFixedVersion = fixedVersion.getNumericId() <= release.getNumericId() ? fixedVersion : null;
         if (newFixedVersion == null) return null;
 
         return new Ticket(key, creationDate, resolutionDate, openingVersion, newFixedVersion, newAffectedVersions);
     }
 
-    public static void proportionTickets(List<Ticket> ticketsList, List<Release> releaseList, String projName) throws IOException {
-        // E' implementata soltanto la variante "Increment"
-        IProportionProcessor proportionProcessor = new IncrementProportionProcessor();
-
-        proportionProcessor.processProportion(ticketsList, releaseList, projName);
-    }
 }

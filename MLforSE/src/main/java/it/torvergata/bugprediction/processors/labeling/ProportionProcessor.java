@@ -1,4 +1,4 @@
-package it.torvergata.bugprediction.processors.proportion;
+package it.torvergata.bugprediction.processors.labeling;
 
 import it.torvergata.bugprediction.models.Release;
 import it.torvergata.bugprediction.models.Ticket;
@@ -27,20 +27,20 @@ public abstract class ProportionProcessor implements  IProportionProcessor {
         int injectedVersionId;
 
         // IV previsto = min(1; FV - (FV - OV) * P), ma se FV = OV allora sostituisci FV - OV con 1
-        if(ticket.getFixedVersion().getNumericID() == ticket.getOpeningVersion().getNumericID()){
-            injectedVersionId = (int) (ticket.getFixedVersion().getNumericID() - proportion);
+        if(ticket.getFixedVersion().getNumericId() == ticket.getOpeningVersion().getNumericId()){
+            injectedVersionId = (int) (ticket.getFixedVersion().getNumericId() - proportion);
         }
         else{
-            injectedVersionId = (int) (ticket.getFixedVersion().getNumericID() -
-                    ((ticket.getFixedVersion().getNumericID() - ticket.getOpeningVersion().getNumericID()) * proportion));
+            injectedVersionId = (int) (ticket.getFixedVersion().getNumericId() -
+                    ((ticket.getFixedVersion().getNumericId() - ticket.getOpeningVersion().getNumericId()) * proportion));
         }
 
-        injectedVersionId = Math.max(1, Math.min(injectedVersionId, releasesList.get(releasesList.size() - 1).getNumericID()));
+        injectedVersionId = Math.max(1, Math.min(injectedVersionId, releasesList.get(releasesList.size() - 1).getNumericId()));
 
         // Assegna l'IV al ticket
         int finalInjectedVersionId = injectedVersionId;
         ticket.setInjectedVersion(releasesList.stream()
-                .filter(release -> release.getNumericID() == finalInjectedVersionId)
+                .filter(release -> release.getNumericId() == finalInjectedVersionId)
                 .toList()
                 .get(0)
         );
@@ -58,13 +58,13 @@ public abstract class ProportionProcessor implements  IProportionProcessor {
         for(Release release: releasesList
                 .stream()
                 .filter(release ->
-                        release.getNumericID() >= ticket.getInjectedVersion().getNumericID()
-                                && release.getNumericID() <= ticket.getOpeningVersion().getNumericID())
+                        release.getNumericId() >= ticket.getInjectedVersion().getNumericId()
+                                && release.getNumericId() <= ticket.getOpeningVersion().getNumericId())
                 .toList()){
-            completeAffectedVersionsList.add(new Release(release.getReleaseID(), release.getReleaseName(), release.getReleaseDateString()));
+            completeAffectedVersionsList.add(new Release(release.getId(), release.getName(), release.getDateString()));
         }
 
-        completeAffectedVersionsList.sort(Comparator.comparing(Release::getReleaseDateTime));
+        completeAffectedVersionsList.sort(Comparator.comparing(Release::getDateTime));
         ticket.setAffectedVersions(completeAffectedVersionsList);
     }
 

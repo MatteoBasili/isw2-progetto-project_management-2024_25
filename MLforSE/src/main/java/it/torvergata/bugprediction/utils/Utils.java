@@ -1,6 +1,7 @@
 package it.torvergata.bugprediction.utils;
 
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 public class Utils {
 
@@ -21,5 +22,10 @@ public class Utils {
 
     public static void printLine(Logger logger) {
         logger.info("---------------------------------------------");
+    }
+
+    public static boolean matchRegex(String s, String regex){
+        Pattern pattern = Pattern.compile(regex + "\\b");
+        return pattern.matcher(s).find();
     }
 }

@@ -1,4 +1,4 @@
-package it.torvergata.bugprediction.processors.proportion;
+package it.torvergata.bugprediction.processors.labeling;
 
 import it.torvergata.bugprediction.models.Release;
 import it.torvergata.bugprediction.models.Ticket;
@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import static it.torvergata.bugprediction.controllers.DatasetBuilder.RESULT_DIRECTORY_NAME;
+import static it.torvergata.bugprediction.controllers.DatasetsBuilder.RESULTS_DIR;
 
 public class IncrementProportionProcessor extends ProportionProcessor {
 
@@ -21,7 +21,7 @@ public class IncrementProportionProcessor extends ProportionProcessor {
         List<Ticket> finalTicketList = new ArrayList<>();
         float proportion = 0;
 
-        File file = new File(RESULT_DIRECTORY_NAME + projName.toLowerCase() + "/reportFiles");
+        File file = new File(RESULTS_DIR + projName.toLowerCase() + "/reportFiles");
         if (!file.exists() && !file.mkdirs()) throw new IOException();
 
         // Possiamo iniziare la proporzione dal primo biglietto con un IV. I precedenti non possono essere proporzionati
@@ -32,9 +32,9 @@ public class IncrementProportionProcessor extends ProportionProcessor {
                 .get(0).getResolutionDate();
         ticketList.removeIf(t -> t.getResolutionDate().isBefore(firstTicketWithIVDate));
 
-        for(Ticket ticket : ticketList){
+        for (Ticket ticket : ticketList){
             // Se il ticket ha una lista di AV
-            if(ticket.isCorrect()){
+            if (ticket.isCorrect()){
                 getProportion(ticketForProportionList, ticket, false);
                 ticket.setInjectedVersion(ticket.getAffectedVersions().get(0));
 
@@ -43,7 +43,7 @@ public class IncrementProportionProcessor extends ProportionProcessor {
                 ticketForProportionList.add(ticket);
             }
             // Se il ticket non ha un elenco di AV
-            else{
+            else {
                 proportion = getProportion(ticketForProportionList, ticket, true);
                 computeInjectedVersion(ticket, releaseList, proportion);
                 computeAffectedVersionsList(ticket, releaseList);
@@ -54,7 +54,7 @@ public class IncrementProportionProcessor extends ProportionProcessor {
 
         finalTicketList.sort(Comparator.comparing(Ticket::getResolutionDate));
 
-        file = new File(RESULT_DIRECTORY_NAME + projName + "/reportFiles/Proportion.txt");
+        file = new File(RESULTS_DIR + projName + "/reportFiles/Proportion.txt");
         try(FileWriter fileWriter = new FileWriter(file)) {
             fileWriter.append(outputToFile.toString());
             FileWriterUtils.flushAndCloseFW(fileWriter, logger, NAME_OF_THIS_CLASS);
@@ -109,9 +109,9 @@ public class IncrementProportionProcessor extends ProportionProcessor {
             propForTicket = 0.0F;
 
             // Se OV != FV il denominatore può essere calcolato, altrimenti la proporzione è 0
-            if (!correctTicket.getOpeningVersion().getReleaseID().equals(correctTicket.getFixedVersion().getReleaseID())) {
-                denominator = ((float) correctTicket.getFixedVersion().getNumericID() - (float) correctTicket.getOpeningVersion().getNumericID());
-                propForTicket = ((float) correctTicket.getFixedVersion().getNumericID() - (float) correctTicket.getInjectedVersion().getNumericID())
+            if (!correctTicket.getOpeningVersion().getId().equals(correctTicket.getFixedVersion().getId())) {
+                denominator = ((float) correctTicket.getFixedVersion().getNumericId() - (float) correctTicket.getOpeningVersion().getNumericId());
+                propForTicket = ((float) correctTicket.getFixedVersion().getNumericId() - (float) correctTicket.getInjectedVersion().getNumericId())
                         / denominator;
             }
 

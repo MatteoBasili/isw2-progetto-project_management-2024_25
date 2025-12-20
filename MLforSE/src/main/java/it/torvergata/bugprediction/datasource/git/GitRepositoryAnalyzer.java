@@ -1,8 +1,8 @@
-package it.torvergata.bugprediction.infrastructure.git;
+package it.torvergata.bugprediction.datasource.git;
 
 import it.torvergata.bugprediction.exceptions.GitException;
 import it.torvergata.bugprediction.models.Commit;
-import it.torvergata.bugprediction.models.ProjectClass;
+import it.torvergata.bugprediction.models.ReleaseClass;
 import it.torvergata.bugprediction.models.Release;
 import it.torvergata.bugprediction.models.Ticket;
 import org.eclipse.jgit.api.Git;
@@ -34,27 +34,29 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class GitRepositoryMiner {
+public class GitRepositoryAnalyzer {
 
-    private final Logger logger;
+    private static final Logger LOGGER = Logger.getLogger(GitRepositoryAnalyzer.class.getName());
     private static final String REPO_BASE_PATH = "repos/";
     private static final String URL_BASE_PATH = "https://github.com/apache/";
 
-    private final Git git;
-    private final Repository repository;
+    private Git git;
+    private Repository repository;
+
+    public GitRepositoryAnalyzer(String projectName) throws GitException {
+        String projectLower = projectName.toLowerCase();
+        cloneRepo(projectLower);
+    }
 
     /**
      * Clona il repository se non presente, oppure apre quello esistente
      */
-    public GitRepositoryMiner(String projectName) throws GitException {
-        logger = Logger.getLogger(GitRepositoryMiner.class.getName());
-
-        String projectLower = projectName.toLowerCase();
-        File repoDir = new File(REPO_BASE_PATH + projectLower);
+    private void cloneRepo(String projectName) throws GitException {
+        File repoDir = new File(REPO_BASE_PATH + projectName);
 
         try {
             if (repoDir.exists()) {
-                logger.log(
+                LOGGER.log(
                         Level.INFO,
                         String.format("Il repository %s è già presente localmente. Apertura in corso...", projectName)
                 );
@@ -63,20 +65,21 @@ public class GitRepositoryMiner {
                         .build();
                 git = new Git(repository);
             } else {
-                String repoUrl = URL_BASE_PATH + projectLower + ".git";
-                logger.log(Level.INFO, String.format("Clonazione da %s", repoUrl));
+                String repoUrl = URL_BASE_PATH + projectName + ".git";
+                LOGGER.log(Level.INFO, String.format("Clonazione da %s", repoUrl));
                 git = Git.cloneRepository()
                         .setURI(repoUrl)
                         .setDirectory(repoDir)
                         .call();
                 repository = git.getRepository();
-                logger.log(Level.INFO, "Clonazione completata con successo.");
+                LOGGER.log(Level.INFO, "Clonazione completata con successo.");
             }
         } catch (GitAPIException | IOException e) {
             throw new GitException("Errore durante l'inizializzazione del repository", e);
         }
     }
 
+    // Recupera la data di una release dal repository
     public LocalDate getReleaseDate(String releaseName)
             throws GitAPIException, IOException, GitException {
 
@@ -104,6 +107,20 @@ public class GitRepositoryMiner {
         );
     }
 
+    // Rimuove tutte le versioni nell'elenco che non hanno un tag Git nel repository
+    public void removeUntaggedReleases(List<Release> releases) throws GitAPIException {
+        List<Ref> tags = git.tagList().call();
+        List<String> tagNames = tags.stream().map(Ref::getName).toList();
+        List<Release> releaseToRemove = new ArrayList<>();
+
+        for(Release release: releases) {
+            if(!tagNames.contains("refs/tags/release-" + release.getName()))
+                releaseToRemove.add(release);
+        }
+
+        releases.removeAll(releaseToRemove);
+    }
+
     public List<Commit> extractCommits(List<Release> jiraReleases) throws IOException, GitAPIException {
 
         // Tutti i commit estratti
@@ -128,7 +145,7 @@ public class GitRepositoryMiner {
             LocalDate previusReleaseDate = LocalDate.of(1970, 1, 1);  // limite inferiore iniziale
             for (Release release: jiraReleases){
                 // Prendi la data della release
-                LocalDate nextReleaseDate = release.getReleaseDateTime();
+                LocalDate nextReleaseDate = release.getDateTime();
 
                 // Se la data di un commit è dopo l’ultima release considerata e prima della prossima release,
                 // allora aggiungilo alla prossima release considerata.
@@ -153,9 +170,9 @@ public class GitRepositoryMiner {
 
     }
 
-    public List<ProjectClass> extractClasses(List<Release> releaseList,
+    public List<ReleaseClass> extractClasses(List<Release> releaseList,
                                              List<Commit> commitList) throws IOException {
-        List<ProjectClass> classList = new ArrayList<>();
+        List<ReleaseClass> classList = new ArrayList<>();
         List<Commit> lastCommitsList = new ArrayList<>();
 
         // Per ogni release vogliamo prendere tutte le sue classi, quindi controlliamo il loro ultimo commit
@@ -169,7 +186,7 @@ public class GitRepositoryMiner {
             // Ottieni una mappa del nome della classe al codice della classe per la versione effettiva
             Map<String, String> classesNameCodeMap = getClassesNameCodeInfos(lastCommit.getRevCommit());
             for(Map.Entry<String, String> classInfo : classesNameCodeMap.entrySet()){
-                classList.add(new ProjectClass(classInfo.getKey(), classInfo.getValue(), lastCommit.getRelease()));
+                classList.add(new ReleaseClass(classInfo.getKey(), classInfo.getValue(), lastCommit.getRelease()));
             }
         }
 
@@ -177,7 +194,7 @@ public class GitRepositoryMiner {
         setTouchingClassesCommits(classList, commitList);
 
         // Ordina le classi per nome
-        classList.sort(Comparator.comparing(ProjectClass::getName));
+        classList.sort(Comparator.comparing(ReleaseClass::getName));
 
         return classList;
     }
@@ -209,8 +226,8 @@ public class GitRepositoryMiner {
      * @param commitList lista dei commit che hanno modificato le classi in classList
      * @throws IOException se si verifica un errore durante l'estrazione dei nomi delle classi modificate
      */
-    private void setTouchingClassesCommits(List<ProjectClass> classList, List<Commit> commitList) throws IOException {
-        List<ProjectClass> tempProjClasses;
+    private void setTouchingClassesCommits(List<ReleaseClass> classList, List<Commit> commitList) throws IOException {
+        List<ReleaseClass> tempProjClasses;
 
         for(Commit commit: commitList){
             Release release = commit.getRelease();
@@ -225,9 +242,9 @@ public class GitRepositoryMiner {
             // Per ogni classe modificata dal commit corrente,
             // aggiungi il commit alla sua lista di commit che toccano la classe
             for(String modifiedClass: modifiedClassesNames){
-                for(ProjectClass projectClass: tempProjClasses){
-                    if(projectClass.getName().equals(modifiedClass) && !projectClass.getTouchingClassCommitList().contains(commit)) {
-                        projectClass.addTouchingClassCommit(commit);
+                for(ReleaseClass releaseClass : tempProjClasses){
+                    if(releaseClass.getName().equals(modifiedClass) && !releaseClass.getTouchingClassCommitList().contains(commit)) {
+                        releaseClass.addTouchingClassCommit(commit);
                     }
                 }
             }
@@ -275,11 +292,11 @@ public class GitRepositoryMiner {
 
     /**
      * Imposta per ogni classe le metriche di LOC aggiunti e rimossi
-     * @param projectClass le classi su cui impostare le metriche LOC
+     * @param releaseClass le classi su cui impostare le metriche LOC
      * @throws IOException in caso di errori durante l'uso del diff formatter
      */
-    public void extractAddedAndRemovedLOC(ProjectClass projectClass) throws IOException {
-        for(Commit commit : projectClass.getTouchingClassCommitList()) {
+    public void extractAddedAndRemovedLOC(ReleaseClass releaseClass) throws IOException {
+        for(Commit commit : releaseClass.getTouchingClassCommitList()) {
             RevCommit revCommit = commit.getRevCommit();
 
             // Ottieni il diff formatter con lo stream di output disabilitato perché non è necessario stampare nulla
@@ -295,9 +312,9 @@ public class GitRepositoryMiner {
                 // Ottieni le differenze tra i file
                 List<DiffEntry> diffEntries = diffFormatter.scan(parentCommit.getTree(), revCommit.getTree());
                 for(DiffEntry diffEntry : diffEntries) {
-                    if(diffEntry.getNewPath().equals(projectClass.getName())) {
-                        projectClass.addAddedLOC(getAddedLines(diffFormatter, diffEntry));
-                        projectClass.addRemovedLOC(getDeletedLines(diffFormatter, diffEntry));
+                    if(diffEntry.getNewPath().equals(releaseClass.getName())) {
+                        releaseClass.addAddedLOC(getAddedLines(diffFormatter, diffEntry));
+                        releaseClass.addRemovedLOC(getDeletedLines(diffFormatter, diffEntry));
                     }
                 }
             } catch(ArrayIndexOutOfBoundsException ignored) {
@@ -327,12 +344,12 @@ public class GitRepositoryMiner {
      * @param ticketList i ticket da cui prendere le informazioni
      * @param classList le classi su cui impostare le informazioni
      */
-    public void labelClassBuggyness(List<Ticket> ticketList, List<ProjectClass> classList) throws IOException {
+    public void labelClassBuggyness(List<Ticket> ticketList, List<ReleaseClass> classList) throws IOException {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 
         // Inizializza l'attributo "buggyness" a false
-        for(ProjectClass projectClass : classList){
-            projectClass.getMetrics().setBuggyness(false);
+        for(ReleaseClass releaseClass : classList){
+            releaseClass.getMetrics().setBuggyness(false);
         }
 
         // Per ogni ticket, ottiene i commit e la versione iniettata (IV)
@@ -368,33 +385,19 @@ public class GitRepositoryMiner {
      * @param classList Tutte le classi del progetto
      */
     private static void labelBuggyClasses(String modifiedClass, Release injectedVersion,
-                                          Release fixedVersion, List<ProjectClass> classList) {
-        for(ProjectClass projectClass: classList){
+                                          Release fixedVersion, List<ReleaseClass> classList) {
+        for(ReleaseClass releaseClass : classList){
             if( // Ottieni la classe con il nome corretto
-                    !projectClass.getName().equals(modifiedClass) ||
+                    !releaseClass.getName().equals(modifiedClass) ||
                             // Verifica che la release della classe sia precedente alla FV
-                            projectClass.getRelease().getReleaseDateTime().isAfter(fixedVersion.getReleaseDateTime()) ||
+                            releaseClass.getRelease().getDateTime().isAfter(fixedVersion.getDateTime()) ||
                             // Verifica che la release della classe sia successiva alla IV
-                            projectClass.getRelease().getReleaseDateTime().isBefore(injectedVersion.getReleaseDateTime())
+                            releaseClass.getRelease().getDateTime().isBefore(injectedVersion.getDateTime())
             ) continue;
 
             // Se tutte le condizioni sono soddisfatte, allora la classe è buggy
-            projectClass.getMetrics().setBuggyness(true);
+            releaseClass.getMetrics().setBuggyness(true);
         }
-    }
-
-    // Rimuove tutte le versioni nell'elenco che non hanno un tag Git
-    public void filterTaggedReleases(List<Release> releases) throws GitAPIException {
-        List<Ref> tags = git.tagList().call();
-        List<String> tagNames = tags.stream().map(Ref::getName).toList();
-        List<Release> releaseToRemove = new ArrayList<>();
-
-        for(Release release: releases) {
-            if(!tagNames.contains("refs/tags/release-" + release.getReleaseName()))
-                releaseToRemove.add(release);
-        }
-
-        releases.removeAll(releaseToRemove);
     }
 
     public void close() {

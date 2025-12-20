@@ -1,4 +1,4 @@
-RELEASE_ID,FILE_NAME,SIZE,LOC_ADDED,LOC_ADDED_AVG,LOC_ADDED_MAX,LOC_REMOVED,LOC_REMOVED_AVG,LOC_REMOVED_MAX,CHURN,CHURN_AVG,CHURN_MAX,NUMBER_OF_REVISIONS,NUMBER_OF_DEFECT_FIXES,NUMBER_OF_AUTHORS,IS_BUGGY
+RELEASE_ID,FILE_NAME,SIZE,LOC_ADDED,AVG_LOC_ADDED,MAX_LOC_ADDED,LOC_REMOVED,AVG_LOC_REMOVED,MAX_LOC_REMOVED,CHURN,AVG_CHURN,MAX_CHURN,NUMBER_OF_REVISIONS,NUMBER_OF_DEFECT_FIXES,NUMBER_OF_AUTHORS,IS_BUGGY
 4,bookkeeper-benchmark/src/main/java/org/apache/bookkeeper/benchmark/BenchBookie.java,215,0,0.0,0,0,0.0,0,0,0.0,0,0,0,0,NO
 4,bookkeeper-benchmark/src/main/java/org/apache/bookkeeper/benchmark/BenchReadThroughputLatency.java,273,4,4.0,4,2,2.0,2,2,2.0,2,1,1,1,YES
 4,bookkeeper-benchmark/src/main/java/org/apache/bookkeeper/benchmark/BenchThroughputLatency.java,460,5,5.0,5,3,3.0,3,2,2.0,2,1,1,1,YES

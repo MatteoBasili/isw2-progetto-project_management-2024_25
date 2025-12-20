@@ -2,14 +2,14 @@
 
 @attribute SIZE numeric
 @attribute LOC_ADDED numeric
-@attribute LOC_ADDED_AVG numeric
-@attribute LOC_ADDED_MAX numeric
+@attribute AVG_LOC_ADDED numeric
+@attribute MAX_LOC_ADDED numeric
 @attribute LOC_REMOVED numeric
-@attribute LOC_REMOVED_AVG numeric
-@attribute LOC_REMOVED_MAX numeric
+@attribute AVG_LOC_REMOVED numeric
+@attribute MAX_LOC_REMOVED numeric
 @attribute CHURN numeric
-@attribute CHURN_AVG numeric
-@attribute CHURN_MAX numeric
+@attribute AVG_CHURN numeric
+@attribute MAX_CHURN numeric
 @attribute NUMBER_OF_REVISIONS numeric
 @attribute NUMBER_OF_DEFECT_FIXES numeric
 @attribute NUMBER_OF_AUTHORS numeric

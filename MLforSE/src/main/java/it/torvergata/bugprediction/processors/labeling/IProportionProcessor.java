@@ -1,4 +1,4 @@
-package it.torvergata.bugprediction.processors.proportion;
+package it.torvergata.bugprediction.processors.labeling;
 
 import it.torvergata.bugprediction.models.Release;
 import it.torvergata.bugprediction.models.Ticket;

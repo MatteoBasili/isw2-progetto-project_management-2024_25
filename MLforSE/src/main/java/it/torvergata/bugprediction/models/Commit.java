@@ -41,7 +41,7 @@ public class Commit {
         this.ticket = ticket;
     }
 
-    public Commit cloneCommitAtRelease(Release release) {
+    public Commit cloneAtRelease(Release release) {
         Commit commit = new Commit(revCommit, release);
         commit.setTicket(ticket);
 

@@ -2,7 +2,7 @@ package it.torvergata.bugprediction;
 
 import it.torvergata.bugprediction.config.ConfigLoader;
 import it.torvergata.bugprediction.config.LoggingConfig;
-import it.torvergata.bugprediction.controllers.DatasetBuilder;
+import it.torvergata.bugprediction.controllers.DatasetsBuilder;
 import it.torvergata.bugprediction.utils.Utils;
 
 import java.util.Scanner;
@@ -25,7 +25,7 @@ public class MLSELauncher {
 
             switch (input) {
                 case "1":
-                    buildDataset();
+                    buildDatasets();
                     break;
                 case "0":
                     exit = true;
@@ -55,13 +55,12 @@ public class MLSELauncher {
                 Seleziona un'opzione:""");
     }
 
-    private static void buildDataset() {
+    private static void buildDatasets() {
         String projectName = ConfigLoader.loadProjectName();
         Utils.logSeparator("Costruzione dei dataset di " + projectName, LOGGER);
 
-        LOGGER.info("Avvio\n");
-        DatasetBuilder datasetBuilder = new DatasetBuilder();
-        int ret = datasetBuilder.build(projectName);
+        DatasetsBuilder datasetsBuilder = new DatasetsBuilder();
+        int ret = datasetsBuilder.build(projectName);
         if (ret == 0) {
             LOGGER.info("\nDataset costruiti correttamente");
         } else {

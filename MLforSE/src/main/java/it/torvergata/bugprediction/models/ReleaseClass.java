@@ -3,7 +3,7 @@ package it.torvergata.bugprediction.models;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ProjectClass {
+public class ReleaseClass {
 
     private final String name;
     private final String contentOfClass;
@@ -13,7 +13,7 @@ public class ProjectClass {
     private final List<Integer> addedLOCList;
     private final List<Integer> removedLOCList;
 
-    public ProjectClass(String name, String contentOfClass, Release release) {
+    public ReleaseClass(String name, String contentOfClass, Release release) {
         this.name = name;
         this.contentOfClass = contentOfClass;
         this.release = release;
