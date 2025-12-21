@@ -7,7 +7,7 @@ public enum OutputFileType {
 
     private final String id;
 
-    private OutputFileType(String id) {
+    OutputFileType(String id) {
         this.id = id;
     }
 

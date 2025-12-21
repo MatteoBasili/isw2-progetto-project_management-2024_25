@@ -1,15 +1,18 @@
 package it.torvergata.bugprediction.config;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class ConfigLoader {
+public final class ConfigLoader {
 
     private static final Logger LOGGER = Logger.getLogger(ConfigLoader.class.getName());
+
     private static final String CONFIG_FILE = "config.properties";
+    private static final String PROJECT_KEY = "PROJECT";
+    private static final String DEFAULT_PROJECT = "BOOKKEEPER";
 
     // Costruttore privato per evitare istanziazione
     private ConfigLoader() {
@@ -23,22 +26,30 @@ public class ConfigLoader {
      * @return nome del progetto
      */
     public static String loadProjectName() {
-        String PROJECT_KEY = "PROJECT";
-        String DEFAULT_PROJECT = "BOOKKEEPER";
         Properties properties = new Properties();
 
-        try (FileInputStream fis = new FileInputStream(CONFIG_FILE)) {
-            properties.load(fis);
+        try (InputStream is = ConfigLoader.class
+                .getClassLoader()
+                .getResourceAsStream(CONFIG_FILE)) {
+
+            if (is == null) {
+                LOGGER.warning(() ->
+                        "[ATTENZIONE!] File di configurazione '" + CONFIG_FILE +
+                                "' non trovato nel classpath. Uso valore di default: " +
+                                PROJECT_KEY + " = " +
+                                DEFAULT_PROJECT);
+                return DEFAULT_PROJECT;
+            }
+
+            properties.load(is);
             return properties.getProperty(PROJECT_KEY, DEFAULT_PROJECT);
+
         } catch (IOException e) {
             LOGGER.log(
                     Level.WARNING,
-                    String.format(
-                            "[ATTENZIONE!] Impossibile leggere il file %s. Verrà utilizzato il valore di default: %s = %s",
-                            CONFIG_FILE,
-                            PROJECT_KEY,
-                            DEFAULT_PROJECT
-                    ),
+                    "[ATTENZIONE!] Errore durante la lettura del file di configurazione. Uso valore di default: "
+                            + PROJECT_KEY + " = "
+                            + DEFAULT_PROJECT,
                     e
             );
             return DEFAULT_PROJECT;

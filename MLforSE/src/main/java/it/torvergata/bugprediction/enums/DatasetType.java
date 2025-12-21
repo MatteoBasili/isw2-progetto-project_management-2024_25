@@ -7,7 +7,7 @@ public enum DatasetType {
 
     private final String id;
 
-    private DatasetType(String id) {
+    DatasetType(String id) {
         this.id = id;
     }
 

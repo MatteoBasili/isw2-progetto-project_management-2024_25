@@ -1082,12 +1082,12 @@ RELEASE_ID,FILE_NAME,SIZE,LOC_ADDED,AVG_LOC_ADDED,MAX_LOC_ADDED,LOC_REMOVED,AVG_
 5,bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/BookieShell.java,934,45,11.25,29,11,2.75,7,34,8.5,22,4,1,2,YES
 5,bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/BufferedChannel.java,180,14,14.0,14,1,1.0,1,13,13.0,13,1,0,1,NO
 5,bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/Cookie.java,260,0,0.0,0,0,0.0,0,0,0.0,0,0,0,0,NO
-5,bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/EntryLogger.java,584,152,30.4,112,34,6.8,22,128,25.6,90,5,1,2,YES
+5,bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/EntryLogger.java,584,152,30.4,112,34,6.8,22,128,25.6,90,5,2,2,YES
 5,bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/ExitCode.java,40,0,0.0,0,0,0.0,0,0,0.0,0,0,0,0,NO
 5,bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/FileInfo.java,372,78,39.0,39,68,34.0,34,10,5.0,5,2,1,2,YES
 5,bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/FileSystemUpgrade.java,388,0,0.0,0,0,0.0,0,0,0.0,0,0,0,0,NO
 5,bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/GarbageCollector.java,51,0,0.0,0,0,0.0,0,0,0.0,0,0,0,0,NO
-5,bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/GarbageCollectorThread.java,609,135,19.285714285714285,110,97,13.857142857142858,82,38,5.428571428571429,28,7,1,2,YES
+5,bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/GarbageCollectorThread.java,609,135,19.285714285714285,110,97,13.857142857142858,82,38,5.428571428571429,28,7,2,2,YES
 5,bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/HandleFactory.java,32,0,0.0,0,0,0.0,0,0,0.0,0,0,0,0,NO
 5,bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/HandleFactoryImpl.java,66,0,0.0,0,0,0.0,0,0,0.0,0,0,0,0,NO
 5,bookkeeper-server/src/main/java/org/apache/bookkeeper/bookie/InterleavedLedgerStorage.java,180,112,37.333333333333336,106,48,16.0,35,80,26.666666666666668,71,3,1,2,NO

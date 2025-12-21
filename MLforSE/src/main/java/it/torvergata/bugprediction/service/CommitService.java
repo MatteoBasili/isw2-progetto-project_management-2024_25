@@ -3,38 +3,56 @@ package it.torvergata.bugprediction.service;
 import it.torvergata.bugprediction.models.Commit;
 import it.torvergata.bugprediction.models.Release;
 import it.torvergata.bugprediction.models.Ticket;
-import it.torvergata.bugprediction.utils.Utils;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class CommitService {
 
     /**
-     * Filtra i commit che hanno un ID ticket nel messaggio, impostando il ticket di un commit e l'elenco di
-     * commit per ogni ticket e rimuovendo i ticket senza un commit
-     * @param commitList commit da filtrare
-     * @param ticketList ticket da cui ottenere gli ID
-     * @return un elenco di commit che fanno riferimento a un ticket
+     * Filtra i commit che hanno un ID ticket nel messaggio, impostando il ticket di un commit
+     * e l'elenco di commit per ogni ticket, rimuovendo i ticket senza un commit.
+     *
+     * @param ticketList lista dei ticket da considerare
+     * @param commitList lista dei commit da filtrare
+     * @return elenco dei commit che fanno riferimento a un ticket
      */
     public static List<Commit> filterAndAssignCommitsToTickets(List<Ticket> ticketList, List<Commit> commitList) {
-        List<Commit> filteredCommitList = new ArrayList<>();
+        if (ticketList == null || commitList == null) return Collections.emptyList();
+
+        // Costruisce una mappa ticketKey -> Ticket per accesso rapido
+        Map<String, Ticket> ticketMap = ticketList.stream()
+                .collect(Collectors.toMap(Ticket::getKey, t -> t));
+
+        Set<Commit> filteredCommitSet = new LinkedHashSet<>(); // evita duplicati e mantiene ordine
+
+        // Per ogni commit, cerca se contiene uno dei ticketKey
         for (Commit commit : commitList) {
-            String commitFullMessage = commit.getRevCommit().getFullMessage();
-            for (Ticket ticket : ticketList) {
-                String ticketKey = ticket.getKey();
-                if (Utils.matchRegex(commitFullMessage, ticketKey)) {
-                    filteredCommitList.add(commit);
-                    ticket.addCommit(commit);
+            String message = commit.getRevCommit().getFullMessage();
+            for (String key : ticketMap.keySet()) {
+                // Usa Pattern.quote per evitare problemi con caratteri speciali
+                Pattern pattern = Pattern.compile(Pattern.quote(key) + "\\b");
+                if (pattern.matcher(message).find()) {
+                    Ticket ticket = ticketMap.get(key);
                     commit.setTicket(ticket);
+                    ticket.addCommit(commit);
+                    filteredCommitSet.add(commit);
+                    break; // assume un commit appartiene al primo ticket trovato
                 }
             }
         }
 
-        // Se un ticket non ha commit significa che non è stato risolto, quindi non ci interessa
-        ticketList.removeIf(ticket -> ticket.getCommitList().isEmpty());
+        // Crea lista finale dei ticket con commit
+        List<Ticket> ticketsWithCommits = ticketList.stream()
+                .filter(t -> !t.getCommitList().isEmpty())
+                .toList();
 
-        return filteredCommitList;
+        ticketList.clear();
+        ticketList.addAll(ticketsWithCommits);
+
+        // Restituisce la lista filtrata di commit
+        return new ArrayList<>(filteredCommitSet);
     }
 
     public static List<Commit> getConsideringCommits(List<Commit> commitList, Release currentRelease) {

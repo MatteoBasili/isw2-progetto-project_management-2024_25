@@ -13,7 +13,7 @@
 @attribute NUMBER_OF_REVISIONS numeric
 @attribute NUMBER_OF_DEFECT_FIXES numeric
 @attribute NUMBER_OF_AUTHORS numeric
-@attribute IS_BUGGY {'YES', 'NO'}
+@attribute IS_BUGGY {'YES','NO}'
 
 @data
 215,1,1.0,1,1,1.0,1,0,0.0,0,1,0,1,NO

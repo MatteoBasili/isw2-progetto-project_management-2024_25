@@ -84,8 +84,8 @@ public class Ticket {
         this.affectedVersions = affectedVersions;
     }
 
-    public boolean isCorrect(){
-        return !getAffectedVersions().isEmpty();
+    public boolean hasAffectedVersions() {
+        return getAffectedVersions() != null && !getAffectedVersions().isEmpty();
     }
 
     public void addCommit(Commit newCommit) {
@@ -95,8 +95,9 @@ public class Ticket {
     }
 
     public Ticket cloneAtRelease(Release release) {
-        List<Release> newAffectedVersions = affectedVersions
-                .stream()
+        List<Release> newAffectedVersions = affectedVersions == null
+                ? List.of()
+                : affectedVersions.stream()
                 .filter(av -> av.getNumericId() <= release.getNumericId())
                 .toList();
         Release newFixedVersion = fixedVersion.getNumericId() <= release.getNumericId() ? fixedVersion : null;

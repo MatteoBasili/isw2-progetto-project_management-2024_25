@@ -1,7 +1,7 @@
 package it.torvergata.bugprediction.controllers;
 
 import it.torvergata.bugprediction.datasource.git.GitRepositoryAnalyzer;
-import it.torvergata.bugprediction.datasource.jira.JiraExtractor;
+import it.torvergata.bugprediction.datasource.jira.JiraClient;
 import it.torvergata.bugprediction.models.Commit;
 import it.torvergata.bugprediction.models.Release;
 import it.torvergata.bugprediction.models.Ticket;
@@ -17,7 +17,7 @@ import java.util.logging.Logger;
 public class DatasetsBuilder {
 
     private final Logger logger;
-    public static final String RESULTS_DIR = "results/";
+    public static final String RESULTS_DIR = "results/datasets/";
 
     public DatasetsBuilder() {
         logger = Logger.getLogger(DatasetsBuilder.class.getName());
@@ -37,14 +37,14 @@ public class DatasetsBuilder {
             gitRepoAnalyzer = new GitRepositoryAnalyzer(projectName);
 
             logger.info("Estrazione delle release...");
-            JiraExtractor jiraExtractor = new JiraExtractor(projectName);
-            List<Release> jiraReleases = jiraExtractor.extractReleases(gitRepoAnalyzer);
+            JiraClient jiraClient = new JiraClient(projectName);
+            List<Release> jiraReleases = jiraClient.extractReleases(gitRepoAnalyzer);
 
             logger.info("Estrazione dei commit...");
             List<Commit> commitList = gitRepoAnalyzer.extractCommits(jiraReleases);
 
             logger.info("Estrazione dei ticket...");
-            List<Ticket> ticketList = jiraExtractor.extractTickets(jiraReleases);
+            List<Ticket> ticketList = jiraClient.extractTickets(jiraReleases);
 
             // Imposta l'id numerico alle release
             ReleaseService.setReleasesNumericID(jiraReleases);
@@ -52,8 +52,10 @@ public class DatasetsBuilder {
             // Prendi metà delle release
             List<Release> datasetReleases = ReleaseService.getFirstHalfOfReleases(jiraReleases);
 
-            // Ottieni un clone di tutti i ticket proporzionati per l'uso nel training set
+            // Ottieni un clone di tutti i ticket secondo la logica di Proportion
             List<Ticket> allTickets = TicketService.getAllTicketsProportioned(jiraReleases, ticketList, projectName);
+
+            // Filtra i commit rilevanti e li collega ai ticket, eliminando i ticket senza commit
             CommitService.filterAndAssignCommitsToTickets(allTickets, commitList);
 
             logger.info("Avvio del walk forward per costruire i set di addestramento e di test...");

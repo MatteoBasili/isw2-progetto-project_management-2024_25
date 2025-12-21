@@ -2,7 +2,6 @@ package it.torvergata.bugprediction.processors.labeling;
 
 import it.torvergata.bugprediction.models.Release;
 import it.torvergata.bugprediction.models.Ticket;
-import it.torvergata.bugprediction.utils.FileWriterUtils;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -19,7 +18,7 @@ public class IncrementProportionProcessor extends ProportionProcessor {
     public void processProportion(List<Ticket> ticketList, List<Release> releaseList, String projName) throws IOException {
         List<Ticket> ticketForProportionList = new ArrayList<>(); // Elenco dei ticket già con la IV
         List<Ticket> finalTicketList = new ArrayList<>();
-        float proportion = 0;
+        float proportion;
 
         File file = new File(RESULTS_DIR + projName.toLowerCase() + "/reportFiles");
         if (!file.exists() && !file.mkdirs()) throw new IOException();
@@ -27,14 +26,14 @@ public class IncrementProportionProcessor extends ProportionProcessor {
         // Possiamo iniziare la proporzione dal primo biglietto con un IV. I precedenti non possono essere proporzionati
         LocalDate firstTicketWithIVDate = ticketList
                 .stream()
-                .filter(Ticket::isCorrect)
+                .filter(Ticket::hasAffectedVersions)
                 .toList()
                 .get(0).getResolutionDate();
         ticketList.removeIf(t -> t.getResolutionDate().isBefore(firstTicketWithIVDate));
 
         for (Ticket ticket : ticketList){
             // Se il ticket ha una lista di AV
-            if (ticket.isCorrect()){
+            if (ticket.hasAffectedVersions()){
                 getProportion(ticketForProportionList, ticket, false);
                 ticket.setInjectedVersion(ticket.getAffectedVersions().get(0));
 
@@ -57,7 +56,6 @@ public class IncrementProportionProcessor extends ProportionProcessor {
         file = new File(RESULTS_DIR + projName + "/reportFiles/Proportion.txt");
         try(FileWriter fileWriter = new FileWriter(file)) {
             fileWriter.append(outputToFile.toString());
-            FileWriterUtils.flushAndCloseFW(fileWriter, logger, NAME_OF_THIS_CLASS);
         }
     }
 

@@ -53,20 +53,4 @@ public class Release {
         commitList.add(commit);
     }
 
-    /***
-     * Trova la release con la data di rilascio più vicina (successivamente) a quella specificata
-     * @param date la data di riferimento
-     * @param releases elenco delle release
-     * @return la prima release con data ≥ 'date' se esiste, null altrimenti
-     */
-    public static Optional<Release> findFirstReleaseOnOrAfter(
-            LocalDate date,
-            List<Release> releases) {
-
-        return releases.stream()
-                .sorted(Comparator.comparing(Release::getDateTime))
-                .filter(r -> !r.getDateTime().isBefore(date))
-                .findFirst();
-    }
-
 }

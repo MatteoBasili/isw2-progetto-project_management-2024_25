@@ -7,6 +7,7 @@ import it.torvergata.bugprediction.models.Commit;
 import it.torvergata.bugprediction.models.ReleaseClass;
 import it.torvergata.bugprediction.models.Release;
 import it.torvergata.bugprediction.models.Ticket;
+import it.torvergata.bugprediction.processors.labeling.Labeler;
 import it.torvergata.bugprediction.processors.metrics.MetricsProcessor;
 import it.torvergata.bugprediction.processors.datasets.DatasetsProcessor;
 import it.torvergata.bugprediction.service.CommitService;
@@ -54,11 +55,11 @@ public class WalkForwardProcessor {
             metricsProcessor.processMetrics();
 
             processWalkForwardIteration(
-                    gitRepoAnalyzer, consideringReleases, consideringTickets, allTickets, classList, projectName);
+                    consideringReleases, consideringTickets, allTickets, classList, projectName);
         }
     }
 
-    private void processWalkForwardIteration(GitRepositoryAnalyzer gitRepoMiner, List<Release> consideringReleaseList,
+    private void processWalkForwardIteration(List<Release> consideringReleaseList,
                                              List<Ticket> consideringTicketList, List<Ticket> allTickets,
                                              List<ReleaseClass> classList, String projName) throws IOException {
         walkForwardIterations++;
@@ -76,17 +77,17 @@ public class WalkForwardProcessor {
                 .filter(c -> c.getRelease().getNumericId() < consideringReleaseList.get(consideringReleaseList.size() - 1).getNumericId())
                 .toList();
 
-        processTrainingSet(gitRepoMiner, trainingSetReleaseList, trainingSetTicketList, trainingSetClassList, projName);
+        processTrainingSet(trainingSetReleaseList, trainingSetTicketList, trainingSetClassList, projName);
 
-        processTestingSet(gitRepoMiner, consideringReleaseList, allTickets, classList, projName);
+        processTestingSet(consideringReleaseList, allTickets, classList, projName);
     }
 
-    private void processTrainingSet(GitRepositoryAnalyzer gitRepoMiner, List<Release> trainingSetReleaseList, List<Ticket> trainingSetTicketList,
+    private void processTrainingSet(List<Release> trainingSetReleaseList, List<Ticket> trainingSetTicketList,
                                     List<ReleaseClass> trainingSetClassList, String projName) throws IOException {
         String loggerString;
 
         // Calcola la “bugginess” usando le informazioni disponibili fino alla release corrente
-        gitRepoMiner.labelClassBuggyness(trainingSetTicketList, trainingSetClassList);
+        Labeler.labelClassesBuggyness(gitRepoAnalyzer, trainingSetTicketList, trainingSetClassList);
 
         // Costruisci il set di addestramento per la release corrente
         DatasetsProcessor.writeDataset(projName, trainingSetReleaseList, trainingSetClassList,
@@ -102,7 +103,7 @@ public class WalkForwardProcessor {
         LOGGER.info("[INFO] " + loggerString);
     }
 
-    private void processTestingSet(GitRepositoryAnalyzer gitRepoMiner, List<Release> releaseList, List<Ticket> currentTicketList,
+    private void processTestingSet(List<Release> releaseList, List<Ticket> currentTicketList,
                                    List<ReleaseClass> classList, String projName) throws IOException {
         String loggerString;
 
@@ -115,7 +116,7 @@ public class WalkForwardProcessor {
                 .toList();
 
         // Calcola la buggyness usando tutte le informazioni fino al presente
-        gitRepoMiner.labelClassBuggyness(currentTicketList, predictingClassList);
+        Labeler.labelClassesBuggyness(gitRepoAnalyzer, currentTicketList, predictingClassList);
 
         // Costruisci il set di test per la release da predire
         DatasetsProcessor.writeDataset(projName, releaseList, predictingClassList,
@@ -128,10 +129,6 @@ public class WalkForwardProcessor {
 
         loggerString = "Testing set costruito sulla release " + predictingRelease.getNumericId();
         LOGGER.info("[INFO] " + loggerString);
-    }
-
-    public int getWalkForwardIterations() {
-        return walkForwardIterations;
     }
 
     private void logStep(Release currentRelease, int totalReleases) {

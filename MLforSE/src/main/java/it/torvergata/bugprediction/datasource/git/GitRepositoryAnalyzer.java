@@ -4,35 +4,33 @@ import it.torvergata.bugprediction.exceptions.GitException;
 import it.torvergata.bugprediction.models.Commit;
 import it.torvergata.bugprediction.models.ReleaseClass;
 import it.torvergata.bugprediction.models.Release;
-import it.torvergata.bugprediction.models.Ticket;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.diff.RawTextComparator;
-import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevTree;
-import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.revwalk.*;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class GitRepositoryAnalyzer {
 
@@ -44,281 +42,305 @@ public class GitRepositoryAnalyzer {
     private Repository repository;
 
     public GitRepositoryAnalyzer(String projectName) throws GitException {
-        String projectLower = projectName.toLowerCase();
-        cloneRepo(projectLower);
+        cloneOrOpenRepository(projectName.toLowerCase());
     }
 
-    /**
-     * Clona il repository se non presente, oppure apre quello esistente
-     */
-    private void cloneRepo(String projectName) throws GitException {
-        File repoDir = new File(REPO_BASE_PATH + projectName);
+    private void cloneOrOpenRepository(String projectName) throws GitException {
+        Path repoPath = Paths.get(REPO_BASE_PATH, projectName);
+        Path gitDir = repoPath.resolve(".git");
 
         try {
-            if (repoDir.exists()) {
-                LOGGER.log(
-                        Level.INFO,
-                        String.format("Il repository %s è già presente localmente. Apertura in corso...", projectName)
-                );
-                repository = new FileRepositoryBuilder()
-                        .setGitDir(new File(repoDir, ".git"))
-                        .build();
-                git = new Git(repository);
+            if (Files.exists(gitDir)) {
+                openExistingRepository(projectName, gitDir);
             } else {
-                String repoUrl = URL_BASE_PATH + projectName + ".git";
-                LOGGER.log(Level.INFO, String.format("Clonazione da %s", repoUrl));
-                git = Git.cloneRepository()
-                        .setURI(repoUrl)
-                        .setDirectory(repoDir)
-                        .call();
-                repository = git.getRepository();
-                LOGGER.log(Level.INFO, "Clonazione completata con successo.");
+                cloneRepository(projectName, repoPath);
             }
-        } catch (GitAPIException | IOException e) {
-            throw new GitException("Errore durante l'inizializzazione del repository", e);
+        } catch (IOException | GitAPIException e) {
+            throw new GitException(
+                    "Errore durante l'inizializzazione del repository: " + projectName, e
+            );
         }
+    }
+
+    private void openExistingRepository(String projectName, Path gitDir) throws IOException {
+        LOGGER.log(Level.INFO,
+                () -> "Il repository " + projectName + " è già presente localmente. Apertura in corso..."
+        );
+
+        repository = new FileRepositoryBuilder()
+                .setGitDir(gitDir.toFile())
+                .build();
+
+        git = new Git(repository);
+    }
+
+    private void cloneRepository(String projectName, Path repoPath) throws GitAPIException {
+        String repoUrl = URL_BASE_PATH + projectName + ".git";
+
+        LOGGER.log(Level.INFO, () -> "Clonazione da " + repoUrl);
+
+        git = Git.cloneRepository()
+                .setURI(repoUrl)
+                .setDirectory(repoPath.toFile())
+                .call();
+
+        repository = git.getRepository();
+
+        LOGGER.log(Level.INFO, "Clonazione completata con successo.");
     }
 
     // Recupera la data di una release dal repository
     public LocalDate getReleaseDate(String releaseName)
             throws GitAPIException, IOException, GitException {
 
-        try (RevWalk walk = new RevWalk(repository)) {
+        List<Ref> refs = git.tagList().call();
 
-            List<Ref> refs = git.tagList().call();
+        for (Ref ref : refs) {
+            if (ref.getName().equals("refs/tags/release-" + releaseName)) {
 
-            for (Ref ref : refs) {
-                if (ref.getName().equals("refs/tags/release-" + releaseName)) {
+                try (RevWalk walk = new RevWalk(repository)) {
+                    RevObject obj = walk.parseAny(ref.getObjectId());
 
-                    Instant tagInstant = walk
-                            .parseTag(ref.getObjectId())
-                            .getTaggerIdent()
-                            .getWhenAsInstant();
+                    Instant instant;
 
-                    return tagInstant
-                            .atZone(ZoneId.systemDefault())
-                            .toLocalDate();
+                    if (obj instanceof RevTag tag) {
+                        instant = tag.getTaggerIdent().getWhenAsInstant();
+                    } else if (obj instanceof RevCommit commit) {
+                        instant = Instant.ofEpochSecond(commit.getCommitTime());
+                    } else {
+                        continue;
+                    }
+
+                    return instant.atZone(ZoneId.systemDefault()).toLocalDate();
                 }
             }
         }
 
         throw new GitException(
-                "Data non trovata per la release con tag: " + releaseName + ". Release ignorata"
+                "Data non trovata per la release: " + releaseName + ". Release ignorata"
         );
     }
 
     // Rimuove tutte le versioni nell'elenco che non hanno un tag Git nel repository
     public void removeUntaggedReleases(List<Release> releases) throws GitAPIException {
-        List<Ref> tags = git.tagList().call();
-        List<String> tagNames = tags.stream().map(Ref::getName).toList();
-        List<Release> releaseToRemove = new ArrayList<>();
 
-        for(Release release: releases) {
-            if(!tagNames.contains("refs/tags/release-" + release.getName()))
-                releaseToRemove.add(release);
-        }
+        Set<String> tagNames = git.tagList().call().stream()
+                .map(Ref::getName)
+                .collect(Collectors.toSet());
 
-        releases.removeAll(releaseToRemove);
+        releases.removeIf(release ->
+                !tagNames.contains("refs/tags/release-" + release.getName())
+        );
     }
 
-    public List<Commit> extractCommits(List<Release> jiraReleases) throws IOException, GitAPIException {
+    public List<Commit> extractCommits(List<Release> jiraReleases)
+            throws IOException, GitAPIException {
 
-        // Tutti i commit estratti
-        List<RevCommit> revCommitList = new ArrayList<>();
+        // Ordina le release per data (fondamentale)
+        jiraReleases.sort(Comparator.comparing(Release::getDateTime));
 
-        // Tutti i commit con le informazioni che ci interessano
+        // Estrai e ordina i commit
+        List<RevCommit> revCommits = new ArrayList<>();
+        git.log().all().call().forEach(revCommits::add);
+
+        revCommits.sort(Comparator.comparingInt(RevCommit::getCommitTime));
+
         List<Commit> commitList = new ArrayList<>();
 
-        Iterable<RevCommit> iterableCommits = git.log().all().call();
-        iterableCommits.forEach(revCommitList::add);
+        int releaseIndex = 0;
 
-        // Ordina i commit per tempo
-        revCommitList.sort(Comparator.comparing(RevCommit::getCommitTime));
-
-        // Imposta tutti i commit per una release e imposta la release di un commit
-        for (RevCommit revCommit : revCommitList) {
-            // Prendi la data del commit
+        for (RevCommit revCommit : revCommits) {
             LocalDate commitDate = Instant.ofEpochSecond(revCommit.getCommitTime())
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate();
 
-            LocalDate previusReleaseDate = LocalDate.of(1970, 1, 1);  // limite inferiore iniziale
-            for (Release release: jiraReleases){
-                // Prendi la data della release
-                LocalDate nextReleaseDate = release.getDateTime();
+            // Avanza finché il commit supera la release corrente
+            while (releaseIndex < jiraReleases.size() &&
+                    commitDate.isAfter(jiraReleases.get(releaseIndex).getDateTime())) {
+                releaseIndex++;
+            }
 
-                // Se la data di un commit è dopo l’ultima release considerata e prima della prossima release,
-                // allora aggiungilo alla prossima release considerata.
-                if (commitDate.isAfter(previusReleaseDate) && !commitDate.isAfter(nextReleaseDate)) {
-                    Commit newCommit = new Commit(revCommit, release);
-                    commitList.add(newCommit);
-                    release.addCommit(newCommit);
-                    break;
-                }
-
-                previusReleaseDate = nextReleaseDate;
+            if (releaseIndex < jiraReleases.size()) {
+                Release release = jiraReleases.get(releaseIndex);
+                Commit commit = new Commit(revCommit, release);
+                commitList.add(commit);
+                release.addCommit(commit);
             }
         }
 
-        // Rimuovi una release se non ha nessun commit
-        jiraReleases.removeIf(release -> release.getCommitList().isEmpty());
-
-        // Ordina i commit per data
-        commitList.sort(Comparator.comparing(commit -> commit.getRevCommit().getCommitTime()));
+        // Rimuovi release senza commit
+        jiraReleases.removeIf(r -> r.getCommitList().isEmpty());
 
         return commitList;
-
     }
 
-    public List<ReleaseClass> extractClasses(List<Release> releaseList,
-                                             List<Commit> commitList) throws IOException {
+    /**
+     * Estrae le classi per ciascuna release e associa i commit che le hanno modificate
+     */
+    public List<ReleaseClass> extractClasses(
+            List<Release> releaseList,
+            List<Commit> commitList) throws IOException {
+
         List<ReleaseClass> classList = new ArrayList<>();
-        List<Commit> lastCommitsList = new ArrayList<>();
 
-        // Per ogni release vogliamo prendere tutte le sue classi, quindi controlliamo il loro ultimo commit
+        // Indicizza le classi per release e nome classe
+        Map<Release, Map<String, ReleaseClass>> classesByRelease = new HashMap<>();
+
+        // Per ogni release prendi solo l'ultimo commit
         for (Release release : releaseList) {
-            // Ordina ogni elenco di commit per ogni release
-            release.getCommitList().sort(Comparator.comparing(commit -> commit.getRevCommit().getCommitterIdent().getWhen()));
-            lastCommitsList.add(release.getCommitList().get(release.getCommitList().size() - 1));
-        }
+            Commit lastCommit = release.getCommitList().stream()
+                    .max(Comparator.comparingInt(c -> c.getRevCommit().getCommitTime()))
+                    .orElseThrow();
 
-        for(Commit lastCommit: lastCommitsList){
-            // Ottieni una mappa del nome della classe al codice della classe per la versione effettiva
-            Map<String, String> classesNameCodeMap = getClassesNameCodeInfos(lastCommit.getRevCommit());
-            for(Map.Entry<String, String> classInfo : classesNameCodeMap.entrySet()){
-                classList.add(new ReleaseClass(classInfo.getKey(), classInfo.getValue(), lastCommit.getRelease()));
+            Map<String, String> classesNameCodeMap =
+                    getClassesNameCodeInfos(lastCommit.getRevCommit());
+
+            for (Map.Entry<String, String> entry : classesNameCodeMap.entrySet()) {
+                ReleaseClass releaseClass =
+                        new ReleaseClass(entry.getKey(), entry.getValue(), release);
+
+                classList.add(releaseClass);
+
+                classesByRelease
+                        .computeIfAbsent(release, r -> new HashMap<>())
+                        .put(entry.getKey(), releaseClass);
             }
         }
 
-        // Imposta l'elenco dei commit che tocca la classe per ogni classe
-        setTouchingClassesCommits(classList, commitList);
+        // Associa i commit alle classi che toccano
+        setTouchingClassesCommits(classesByRelease, commitList);
 
-        // Ordina le classi per nome
+        // Ordina per nome classe
         classList.sort(Comparator.comparing(ReleaseClass::getName));
 
         return classList;
     }
 
     /**
-     * Estrae da un commit il nome e il codice sorgente delle classi Java, escludendo le classi di test
-     * @param revCommit il commit da cui estrarre le classi
-     * @return una mappa che associa il nome della classe al relativo codice sorgente
-     * @throws IOException dovuta all'utilizzo delle API di JGit
+     * Estrae nome e codice sorgente delle classi Java da un commit
+     * (escluse le classi di test)
      */
-    private Map<String, String> getClassesNameCodeInfos(RevCommit revCommit) throws IOException {
-        Map<String, String> allClasses = new HashMap<>();
+    private Map<String, String> getClassesNameCodeInfos(RevCommit revCommit)
+            throws IOException {
+
+        Map<String, String> classes = new HashMap<>();
         RevTree tree = revCommit.getTree();
-        TreeWalk treeWalk = new TreeWalk(repository);
-        treeWalk.addTree(tree);
-        treeWalk.setRecursive(true);
-        while(treeWalk.next()) {
-            if(treeWalk.getPathString().contains(".java") && !treeWalk.getPathString().contains("/src/test/")) {
-                allClasses.put(treeWalk.getPathString(), new String(repository.open(treeWalk.getObjectId(0)).getBytes(), StandardCharsets.UTF_8));
+
+        try (TreeWalk treeWalk = new TreeWalk(repository)) {
+            treeWalk.addTree(tree);
+            treeWalk.setRecursive(true);
+
+            while (treeWalk.next()) {
+                String path = treeWalk.getPathString();
+
+                if (path.endsWith(".java") && !path.contains("/src/test/")) {
+                    byte[] bytes = repository
+                            .open(treeWalk.getObjectId(0))
+                            .getBytes();
+
+                    classes.put(path, new String(bytes, StandardCharsets.UTF_8));
+                }
             }
         }
-        treeWalk.close();
-        return allClasses;
+        return classes;
     }
 
     /**
-     * Aggiunge ogni commit alla lista dei commit che hanno modificato ciascuna classe
-     * @param classList lista delle classi su cui impostare la lista dei commit che le toccano
-     * @param commitList lista dei commit che hanno modificato le classi in classList
-     * @throws IOException se si verifica un errore durante l'estrazione dei nomi delle classi modificate
+     * Aggiunge a ogni classe i commit che l'hanno modificata
      */
-    private void setTouchingClassesCommits(List<ReleaseClass> classList, List<Commit> commitList) throws IOException {
-        List<ReleaseClass> tempProjClasses;
+    private void setTouchingClassesCommits(
+            Map<Release, Map<String, ReleaseClass>> classesByRelease,
+            List<Commit> commitList) throws IOException {
 
-        for(Commit commit: commitList){
+        for (Commit commit : commitList) {
             Release release = commit.getRelease();
-            tempProjClasses = new ArrayList<>(classList);
+            Map<String, ReleaseClass> releaseClasses =
+                    classesByRelease.get(release);
 
-            // Ottieni la lista delle classi appartenenti alla release del commit corrente
-            tempProjClasses.removeIf(tempProjClass -> !tempProjClass.getRelease().equals(release));
+            if (releaseClasses == null) {
+                continue;
+            }
 
-            // Ottieni le classi modificate dal commit corrente
-            List<String> modifiedClassesNames = getTouchedClassesNames(commit.getRevCommit());
+            List<String> touchedClasses =
+                    getTouchedClassesNames(commit.getRevCommit());
 
-            // Per ogni classe modificata dal commit corrente,
-            // aggiungi il commit alla sua lista di commit che toccano la classe
-            for(String modifiedClass: modifiedClassesNames){
-                for(ReleaseClass releaseClass : tempProjClasses){
-                    if(releaseClass.getName().equals(modifiedClass) && !releaseClass.getTouchingClassCommitList().contains(commit)) {
-                        releaseClass.addTouchingClassCommit(commit);
-                    }
+            for (String className : touchedClasses) {
+                ReleaseClass releaseClass = releaseClasses.get(className);
+                if (releaseClass != null) {
+                    releaseClass.addTouchingClassCommit(commit);
                 }
             }
         }
     }
 
     /**
-     * Ottiene i nomi delle classi toccate da un commit
-     *
-     * @param commit il commit che ha modificato le classi
-     * @return una lista dei nomi delle classi modificate
-     * @throws IOException se si verifica un errore durante la lettura delle classi
+     * Ottiene i nomi delle classi Java modificate da un commit
      */
-    private List<String> getTouchedClassesNames(RevCommit commit) throws IOException  {
-        List<String> touchedClassesNames = new ArrayList<>();
+    public List<String> getTouchedClassesNames(RevCommit commit)
+            throws IOException {
 
-        // Il DiffFormatter formatta le differenze tra due commit
-        try (DiffFormatter diffFormatter = new DiffFormatter(DisabledOutputStream.INSTANCE);
-            ObjectReader reader = repository.newObjectReader()) {
-            RevCommit commitParent = commit.getParent(0);
+        // Commit iniziale senza genitore
+        if (commit.getParentCount() == 0) {
+            return Collections.emptyList();
+        }
+
+        List<String> touchedClasses = new ArrayList<>();
+
+        try (DiffFormatter diffFormatter =
+                     new DiffFormatter(DisabledOutputStream.INSTANCE);
+             ObjectReader reader = repository.newObjectReader()) {
+
             diffFormatter.setRepository(repository);
 
-            // Ottieni l'albero (tree) del commit corrente
-            CanonicalTreeParser newTreeIter = new CanonicalTreeParser();
-            ObjectId newTree = commit.getTree();
-            newTreeIter.reset(reader, newTree);
+            CanonicalTreeParser newTree = new CanonicalTreeParser();
+            newTree.reset(reader, commit.getTree());
 
-            // Ottieni l'albero del commit genitore
-            CanonicalTreeParser oldTreeIter = new CanonicalTreeParser();
-            ObjectId oldTree = commitParent.getTree();
-            oldTreeIter.reset(reader, oldTree);
+            CanonicalTreeParser oldTree = new CanonicalTreeParser();
+            oldTree.reset(reader, commit.getParent(0).getTree());
 
-            // Ottieni i nomi delle classi modificate
-            List<DiffEntry> entries = diffFormatter.scan(oldTreeIter, newTreeIter);
-            for (DiffEntry entry : entries) {
-                if (entry.getNewPath().contains(".java") && !entry.getNewPath().contains("/src/test/")) {
-                    touchedClassesNames.add(entry.getNewPath());
+            List<DiffEntry> diffs =
+                    diffFormatter.scan(oldTree, newTree);
+
+            for (DiffEntry entry : diffs) {
+                String path = entry.getNewPath();
+                if (path.endsWith(".java") && !path.contains("/src/test/")) {
+                    touchedClasses.add(path);
                 }
             }
-        } catch (ArrayIndexOutOfBoundsException ignored) {
-            // ignorato quando non viene trovato nessun genitore
         }
-        return touchedClassesNames;
+        return touchedClasses;
     }
 
     /**
-     * Imposta per ogni classe le metriche di LOC aggiunti e rimossi
-     * @param releaseClass le classi su cui impostare le metriche LOC
-     * @throws IOException in caso di errori durante l'uso del diff formatter
+     * Calcola e imposta per una classe le righe di codice aggiunte e rimosse
+     * da tutti i commit che hanno modificato quella classe.
      */
     public void extractAddedAndRemovedLOC(ReleaseClass releaseClass) throws IOException {
-        for(Commit commit : releaseClass.getTouchingClassCommitList()) {
-            RevCommit revCommit = commit.getRevCommit();
 
-            // Ottieni il diff formatter con lo stream di output disabilitato perché non è necessario stampare nulla
-            try(DiffFormatter diffFormatter = new DiffFormatter(DisabledOutputStream.INSTANCE)) {
+        try (DiffFormatter diffFormatter =
+                     new DiffFormatter(DisabledOutputStream.INSTANCE)) {
 
-                // Prendi il primo genitore del commit
+            diffFormatter.setRepository(repository);
+            diffFormatter.setDiffComparator(RawTextComparator.DEFAULT);
+
+            for (Commit commit : releaseClass.getTouchingClassCommitList()) {
+
+                RevCommit revCommit = commit.getRevCommit();
+
+                if (revCommit.getParentCount() == 0) {
+                    continue;
+                }
+
                 RevCommit parentCommit = revCommit.getParent(0);
-                diffFormatter.setRepository(repository);
+                List<DiffEntry> diffEntries =
+                        diffFormatter.scan(parentCommit.getTree(), revCommit.getTree());
 
-                // Il comparatore di default confronta il testo senza alcun trattamento speciale
-                diffFormatter.setDiffComparator(RawTextComparator.DEFAULT);
-
-                // Ottieni le differenze tra i file
-                List<DiffEntry> diffEntries = diffFormatter.scan(parentCommit.getTree(), revCommit.getTree());
-                for(DiffEntry diffEntry : diffEntries) {
-                    if(diffEntry.getNewPath().equals(releaseClass.getName())) {
+                for (DiffEntry diffEntry : diffEntries) {
+                    if (diffEntry.getNewPath().equals(releaseClass.getName())) {
                         releaseClass.addAddedLOC(getAddedLines(diffFormatter, diffEntry));
                         releaseClass.addRemovedLOC(getDeletedLines(diffFormatter, diffEntry));
                     }
                 }
-            } catch(ArrayIndexOutOfBoundsException ignored) {
-                // ignora quando non viene trovato nessun genitore
             }
         }
     }
@@ -337,67 +359,6 @@ public class GitRepositoryAnalyzer {
             deletedLines += edit.getEndA() - edit.getBeginA();
         }
         return deletedLines;
-    }
-
-    /**
-     * Inizializza l'attributo "buggyness" a false, prende i commit che toccano ogni classe e con essi imposta l'attributo buggy
-     * @param ticketList i ticket da cui prendere le informazioni
-     * @param classList le classi su cui impostare le informazioni
-     */
-    public void labelClassBuggyness(List<Ticket> ticketList, List<ReleaseClass> classList) throws IOException {
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-
-        // Inizializza l'attributo "buggyness" a false
-        for(ReleaseClass releaseClass : classList){
-            releaseClass.getMetrics().setBuggyness(false);
-        }
-
-        // Per ogni ticket, ottiene i commit e la versione iniettata (IV)
-        for(Ticket ticket: ticketList) {
-            List<Commit> ticketCommits = ticket.getCommitList();
-            Release injectedVersion = ticket.getInjectedVersion();
-
-            for (Commit commit : ticketCommits) {
-                RevCommit revCommit = commit.getRevCommit();
-                LocalDate commitDate = LocalDate.parse(formatter.format(revCommit.getCommitterIdent().getWhen()));
-
-                // Ottiene la lista dei nomi delle classi modificate dal commit
-                List<String> modifiedClassesNames = getTouchedClassesNames(revCommit);
-
-                // Se la data del commit è compresa tra la creazione e la risoluzione del ticket, allora è valido
-                if (!commitDate.isAfter(ticket.getResolutionDate()) && !commitDate.isBefore(ticket.getCreationDate())) {
-                    // Ottiene la release di quel commit
-                    Release releaseOfCommit = commit.getRelease();
-                    for (String modifiedClass : modifiedClassesNames) {
-                        // Imposta l'attributo "buggyness" di ogni classe modificata
-                        labelBuggyClasses(modifiedClass, injectedVersion, releaseOfCommit, classList);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Imposta come buggy le classi comprese tra la versione iniettata (IV) e la versione corretta (FV) di un bug
-     * @param modifiedClass Il nome della classe modificata
-     * @param injectedVersion La release IV
-     * @param fixedVersion La release FV
-     * @param classList Tutte le classi del progetto
-     */
-    private static void labelBuggyClasses(String modifiedClass, Release injectedVersion,
-                                          Release fixedVersion, List<ReleaseClass> classList) {
-        for(ReleaseClass releaseClass : classList){
-            if( // Ottieni la classe con il nome corretto
-                    !releaseClass.getName().equals(modifiedClass) ||
-                            // Verifica che la release della classe sia precedente alla FV
-                            releaseClass.getRelease().getDateTime().isAfter(fixedVersion.getDateTime()) ||
-                            // Verifica che la release della classe sia successiva alla IV
-                            releaseClass.getRelease().getDateTime().isBefore(injectedVersion.getDateTime())
-            ) continue;
-
-            // Se tutte le condizioni sono soddisfatte, allora la classe è buggy
-            releaseClass.getMetrics().setBuggyness(true);
-        }
     }
 
     public void close() {
