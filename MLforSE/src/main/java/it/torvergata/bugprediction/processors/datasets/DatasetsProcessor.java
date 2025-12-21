@@ -68,7 +68,7 @@ public class DatasetsProcessor {
                     "NUMBER_OF_REVISIONS numeric",
                     "NUMBER_OF_DEFECT_FIXES numeric",
                     "NUMBER_OF_AUTHORS numeric",
-                    "IS_BUGGY {'YES','NO}'")) {
+                    "IS_BUGGY {'YES','NO'}")) {
                 writer.write("@attribute " + attr + lineSep);
             }
             writer.write(lineSep + "@data" + lineSep);

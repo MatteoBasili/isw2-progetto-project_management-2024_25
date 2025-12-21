@@ -11,15 +11,6 @@ public enum DatasetType {
         this.id = id;
     }
 
-    public static DatasetType fromString(String id) {
-        for (DatasetType type : values()) {
-            if (type.getId().equals(id)) {
-                return type;
-            }
-        }
-        return null;
-    }
-
     public String getId() {
         return id;
     }
