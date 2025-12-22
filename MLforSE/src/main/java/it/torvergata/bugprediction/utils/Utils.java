@@ -5,6 +5,8 @@ import java.util.logging.Logger;
 
 public class Utils {
 
+    private static final String SEPARATOR = "---------------------------------------------";
+
     private Utils() {
         throw new UnsupportedOperationException("Utility class");
     }
@@ -15,22 +17,20 @@ public class Utils {
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("---------------------------------------------")
-                .append(System.lineSeparator());
+        sb.append(SEPARATOR).append(System.lineSeparator());
 
         if (!title.isEmpty()) {
-            sb.append("=== ").append(title).append(" ===")
-                    .append(System.lineSeparator());
+            sb.append("=== ").append(title).append(" ===").append(System.lineSeparator());
         }
 
-        sb.append("---------------------------------------------");
+        sb.append(SEPARATOR);
 
         logger.info(sb.toString());
     }
 
     public static void printLine(Logger logger) {
         if (logger.isLoggable(Level.INFO)) {
-            logger.info("---------------------------------------------");
+            logger.info(SEPARATOR);
         }
     }
 }
