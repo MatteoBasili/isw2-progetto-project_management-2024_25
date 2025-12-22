@@ -1,26 +1,36 @@
 package it.torvergata.bugprediction.utils;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Utils {
 
-    // Costruttore privato per evitare istanziazione
     private Utils() {
         throw new UnsupportedOperationException("Utility class");
     }
 
     public static void logSeparator(String title, Logger logger) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n---------------------------------------------\n");
-        if (!title.isEmpty()) {
-            sb.append("=== ").append(title).append(" ===\n");
+        if (!logger.isLoggable(Level.INFO)) {
+            return;
         }
-        sb.append("---------------------------------------------\n");
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("---------------------------------------------")
+                .append(System.lineSeparator());
+
+        if (!title.isEmpty()) {
+            sb.append("=== ").append(title).append(" ===")
+                    .append(System.lineSeparator());
+        }
+
+        sb.append("---------------------------------------------");
+
         logger.info(sb.toString());
     }
 
     public static void printLine(Logger logger) {
-        logger.info("---------------------------------------------");
+        if (logger.isLoggable(Level.INFO)) {
+            logger.info("---------------------------------------------");
+        }
     }
-
 }

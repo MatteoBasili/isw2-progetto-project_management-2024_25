@@ -8,9 +8,12 @@ import it.torvergata.bugprediction.processors.labeling.IncrementProportionProces
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 public class TicketService {
+
+    private TicketService() {
+        throw new UnsupportedOperationException("Utility class");
+    }
 
     public static List<Ticket> getAllTicketsProportioned(List<Release> jiraReleases, List<Ticket> ticketList,
                                                    String projName) throws IOException {

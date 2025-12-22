@@ -18,6 +18,7 @@ import it.torvergata.bugprediction.utils.Utils;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class WalkForwardProcessor {
@@ -100,7 +101,7 @@ public class WalkForwardProcessor {
         } else {
             loggerString = "Training set costruito sulle release da 1 a " + (trainingSetReleaseList.get(trainingSetReleaseList.size() - 1).getNumericId());
         }
-        LOGGER.info("[INFO] " + loggerString);
+        LOGGER.log(java.util.logging.Level.INFO, "{0}", loggerString);
     }
 
     private void processTestingSet(List<Release> releaseList, List<Ticket> currentTicketList,
@@ -128,14 +129,22 @@ public class WalkForwardProcessor {
 
 
         loggerString = "Testing set costruito sulla release " + predictingRelease.getNumericId();
-        LOGGER.info("[INFO] " + loggerString);
+        LOGGER.log(Level.INFO, "{0}", loggerString);
     }
 
     private void logStep(Release currentRelease, int totalReleases) {
         int step = currentRelease.getNumericId() - 1;
         int totalSteps = totalReleases - 1;
-        LOGGER.info("Passo " + step + " su " + totalSteps + ": elaborazione release "
-                + currentRelease.getNumericId() + " (" + currentRelease.getName() + ")\n");
+        LOGGER.log(
+                java.util.logging.Level.INFO,
+                "Passo {0} su {1}: elaborazione release {2} ({3})",
+                new Object[]{
+                        step,
+                        totalSteps,
+                        currentRelease.getNumericId(),
+                        currentRelease.getName()
+                }
+        );
     }
 
 }

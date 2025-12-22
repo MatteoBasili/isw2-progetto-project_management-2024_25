@@ -10,6 +10,10 @@ import java.util.stream.Collectors;
 
 public class CommitService {
 
+    private CommitService() {
+        throw new UnsupportedOperationException("Utility class");
+    }
+
     /**
      * Filtra i commit che hanno un ID ticket nel messaggio, impostando il ticket di un commit
      * e l'elenco di commit per ogni ticket, rimuovendo i ticket senza un commit.
@@ -30,11 +34,12 @@ public class CommitService {
         // Per ogni commit, cerca se contiene uno dei ticketKey
         for (Commit commit : commitList) {
             String message = commit.getRevCommit().getFullMessage();
-            for (String key : ticketMap.keySet()) {
-                // Usa Pattern.quote per evitare problemi con caratteri speciali
+            for (Map.Entry<String, Ticket> entry : ticketMap.entrySet()) {
+                String key = entry.getKey();
+                Ticket ticket = entry.getValue();
+
                 Pattern pattern = Pattern.compile(Pattern.quote(key) + "\\b");
                 if (pattern.matcher(message).find()) {
-                    Ticket ticket = ticketMap.get(key);
                     commit.setTicket(ticket);
                     ticket.addCommit(commit);
                     filteredCommitSet.add(commit);

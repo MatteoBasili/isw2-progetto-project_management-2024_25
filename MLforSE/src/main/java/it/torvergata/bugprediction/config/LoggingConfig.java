@@ -23,8 +23,8 @@ public final class LoggingConfig {
         handler.setLevel(LOG_LEVEL);
         handler.setFormatter(new Formatter() {
             @Override
-            public String format(LogRecord record) {
-                return record.getMessage() + System.lineSeparator();
+            public String format(LogRecord logRecord) {
+                return logRecord.getMessage() + System.lineSeparator();
             }
         });
 

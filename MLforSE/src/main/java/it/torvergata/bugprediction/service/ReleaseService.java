@@ -10,6 +10,10 @@ import java.util.stream.Collectors;
 
 public class ReleaseService {
 
+    private ReleaseService() {
+        throw new UnsupportedOperationException("Utility class");
+    }
+
     /***
      * Trova la release con la data di rilascio più vicina (successivamente) a quella specificata
      */

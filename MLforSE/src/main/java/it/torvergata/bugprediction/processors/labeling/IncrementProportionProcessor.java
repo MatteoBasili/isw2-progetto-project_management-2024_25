@@ -55,7 +55,7 @@ public class IncrementProportionProcessor extends ProportionProcessor {
             if (!t.getOpeningVersion().getId().equals(t.getFixedVersion().getId())) {
 
                 float denominator =
-                        t.getFixedVersion().getNumericId()
+                        (float) t.getFixedVersion().getNumericId()
                                 - t.getOpeningVersion().getNumericId();
 
                 float prop =

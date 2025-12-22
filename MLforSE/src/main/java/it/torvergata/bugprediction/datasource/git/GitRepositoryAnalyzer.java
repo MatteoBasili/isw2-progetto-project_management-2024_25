@@ -36,7 +36,9 @@ public class GitRepositoryAnalyzer {
 
     private static final Logger LOGGER = Logger.getLogger(GitRepositoryAnalyzer.class.getName());
     private static final String REPO_BASE_PATH = "repos/";
-    private static final String URL_BASE_PATH = "https://github.com/apache/";
+
+    private static final String URL_BASE_PATH =
+            System.getProperty("git.repo.base.url", "https://github.com/apache/");
 
     private Git git;
     private Repository repository;
