@@ -100,14 +100,16 @@ public class WalkForwardProcessor {
         } else {
             loggerString = "Training set costruito sulle release da 1 a " + (trainingSetReleaseList.get(trainingSetReleaseList.size() - 1).getNumericId());
         }
-        LOGGER.info(String.format("%s", loggerString));
+        if (LOGGER.isLoggable(java.util.logging.Level.INFO)) {
+            LOGGER.info(String.format("%s", loggerString));
+        }
     }
 
     private void processTestingSet(List<Release> releaseList, List<Ticket> currentTicketList,
                                    List<ReleaseClass> classList, String projName) throws IOException {
         String loggerString;
 
-        // Ottieni la release da predire, quella successiva alla corrente
+        // Ottieni la release da predire
         Release predictingRelease = releaseList.get(releaseList.size() - 1);
 
         // Ottieni le classi da predire
@@ -128,19 +130,23 @@ public class WalkForwardProcessor {
 
 
         loggerString = "Testing set costruito sulla release " + predictingRelease.getNumericId();
-        LOGGER.info(String.format("%s", loggerString));
+        if (LOGGER.isLoggable(java.util.logging.Level.INFO)) {
+            LOGGER.info(String.format("%s", loggerString));
+        }
     }
 
     private void logStep(Release currentRelease, int totalReleases) {
         int step = currentRelease.getNumericId() - 1;
         int totalSteps = totalReleases - 1;
-        LOGGER.info(String.format(
-                "Passo %d su %d: elaborazione release %d (%s)",
-                step,
-                totalSteps,
-                currentRelease.getNumericId(),
-                currentRelease.getName()
-        ));
+        if (LOGGER.isLoggable(java.util.logging.Level.INFO)) {
+            LOGGER.info(String.format(
+                    "Passo %d su %d: elaborazione release %d (%s)",
+                    step,
+                    totalSteps,
+                    currentRelease.getNumericId(),
+                    currentRelease.getName()
+            ));
+        }
     }
 
 }

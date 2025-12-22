@@ -33,13 +33,7 @@ public class TicketService {
         proportionProcessor.processProportion(ticketsList, releaseList, projName);
     }
 
-    /**
-     * L'elenco dei ticket da considerare in una determinata release è composto dalla visualizzazione dei ticket
-     * che erano disponibili in quella release
-     * @param ticketList tutti i ticket disponibili
-     * @param currentRelease la release da considerare come punto di vista dei ticket
-     * @return ticket con OV <= currentRelease
-     */
+    // Restituisce i ticket fino alla release corrente, adattati alle versioni effettivamente rilevanti per quella release
     public static List<Ticket> getConsideringTickets(List<Ticket> ticketList, Release currentRelease) {
         List<Ticket> consideringTicketList = ticketList
                 .stream()

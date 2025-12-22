@@ -60,7 +60,7 @@ public class ReleaseService {
         }
     }
 
-    // Prendi la prima parte delle release
+    // Prendi la prima metà delle release
     public static List<Release> getFirstHalfOfReleases(List<Release> releaseList) {
         if (releaseList == null || releaseList.isEmpty()) {
             return Collections.emptyList();

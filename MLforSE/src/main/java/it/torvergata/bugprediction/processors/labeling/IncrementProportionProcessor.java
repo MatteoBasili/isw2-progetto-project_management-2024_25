@@ -31,7 +31,7 @@ public class IncrementProportionProcessor extends ProportionProcessor {
                 ticket.setInjectedVersion(ticket.getAffectedVersions().get(0));
                 ticketForProportionList.add(ticket);
             } else {
-                // Order the tickets by date
+                // Ordina i ticket per data
                 ticketForProportionList.sort(Comparator.comparing(Ticket::getResolutionDate));
 
                 float proportion = computeProportion(ticketForProportionList);

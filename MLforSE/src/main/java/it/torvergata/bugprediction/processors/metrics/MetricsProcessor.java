@@ -47,8 +47,8 @@ public class MetricsProcessor {
     }
 
     /**
-     * Per ogni classe del progetto nella classList calcola il numero di correzioni di bug come il numero di commit che
-     * modificano la classe
+     * Per ogni classe calcola il numero di correzioni di bug
+     * come il numero di ticket di bug che l'hanno coinvolta
      */
     private void processNumberOfDefectFixes() {
         for (ReleaseClass releaseClass : classList) {
@@ -118,6 +118,7 @@ public class MetricsProcessor {
                 }
             }
 
+            // Imposta i valori medi
             processAverageLOCMetrics(currentClass, locAddedByClass, locRemovedByClass,
                     addedLOC, removedLOC, churnLOC);
         }
@@ -125,7 +126,6 @@ public class MetricsProcessor {
 
     private void processAverageLOCMetrics(ReleaseClass currentClass, List<Integer> locAddedByClass, List<Integer> locRemovedByClass,
                                           LOCMetrics addedLOC, LOCMetrics removedLOC, LOCMetrics churnLOC){
-        // Imposta i valori medi
         int nRevisions = currentClass.getMetrics().getNumberOfRevisions();
         if(!locAddedByClass.isEmpty()) {
             addedLOC.setAvgVal(1.0* addedLOC.getVal()/ nRevisions);
