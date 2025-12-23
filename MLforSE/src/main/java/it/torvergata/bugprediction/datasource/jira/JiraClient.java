@@ -4,7 +4,7 @@ import it.torvergata.bugprediction.exceptions.GitException;
 import it.torvergata.bugprediction.datasource.git.GitRepositoryAnalyzer;
 import it.torvergata.bugprediction.models.Release;
 import it.torvergata.bugprediction.models.Ticket;
-import it.torvergata.bugprediction.service.ReleaseService;
+import it.torvergata.bugprediction.services.ReleaseService;
 import it.torvergata.bugprediction.utils.JsonUtils;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.json.JSONArray;

@@ -5,7 +5,7 @@ import java.util.logging.Logger;
 
 public class Utils {
 
-    private static final String SEPARATOR = "---------------------------------------------";
+    private static final String SEPARATOR = "-".repeat(80);
 
     private Utils() {
         throw new UnsupportedOperationException("Utility class");
@@ -17,13 +17,18 @@ public class Utils {
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append(SEPARATOR).append(System.lineSeparator());
 
         if (!title.isEmpty()) {
-            sb.append("=== ").append(title).append(" ===").append(System.lineSeparator());
-        }
+            // calcola la lunghezza necessaria per la linea sopra/sotto il titolo
+            int lineLength = title.length() + 8;  // 8 = "=== " + " ==="
+            String dynamicLine = "-".repeat(lineLength);
 
-        sb.append(SEPARATOR);
+            sb.append(dynamicLine).append(System.lineSeparator());
+            sb.append("=== ").append(title).append(" ===").append(System.lineSeparator());
+            sb.append(dynamicLine);
+        } else {
+            sb.append(SEPARATOR);
+        }
 
         logger.info(sb.toString());
     }

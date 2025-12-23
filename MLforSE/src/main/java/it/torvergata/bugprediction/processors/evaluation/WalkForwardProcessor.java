@@ -10,9 +10,9 @@ import it.torvergata.bugprediction.models.Ticket;
 import it.torvergata.bugprediction.processors.labeling.Labeler;
 import it.torvergata.bugprediction.processors.metrics.MetricsProcessor;
 import it.torvergata.bugprediction.processors.datasets.DatasetsProcessor;
-import it.torvergata.bugprediction.service.CommitService;
-import it.torvergata.bugprediction.service.ReleaseService;
-import it.torvergata.bugprediction.service.TicketService;
+import it.torvergata.bugprediction.services.CommitService;
+import it.torvergata.bugprediction.services.ReleaseService;
+import it.torvergata.bugprediction.services.TicketService;
 import it.torvergata.bugprediction.utils.Utils;
 
 import java.io.IOException;

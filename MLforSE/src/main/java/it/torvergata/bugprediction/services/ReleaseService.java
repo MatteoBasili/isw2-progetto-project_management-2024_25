@@ -1,4 +1,4 @@
-package it.torvergata.bugprediction.service;
+package it.torvergata.bugprediction.services;
 
 import it.torvergata.bugprediction.models.Release;
 import org.json.JSONArray;

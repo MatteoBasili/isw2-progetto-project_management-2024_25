@@ -6,9 +6,9 @@ import it.torvergata.bugprediction.models.Commit;
 import it.torvergata.bugprediction.models.Release;
 import it.torvergata.bugprediction.models.Ticket;
 import it.torvergata.bugprediction.processors.evaluation.WalkForwardProcessor;
-import it.torvergata.bugprediction.service.CommitService;
-import it.torvergata.bugprediction.service.ReleaseService;
-import it.torvergata.bugprediction.service.TicketService;
+import it.torvergata.bugprediction.services.CommitService;
+import it.torvergata.bugprediction.services.ReleaseService;
+import it.torvergata.bugprediction.services.TicketService;
 import it.torvergata.bugprediction.utils.Utils;
 
 import java.util.List;
@@ -17,7 +17,7 @@ import java.util.logging.Logger;
 public class DatasetsBuilder {
 
     private final Logger logger;
-    public static final String RESULTS_DIR = "results/datasets/";
+    public static final String DATASETS_DIR = "results/datasets/";
 
     public DatasetsBuilder() {
         logger = Logger.getLogger(DatasetsBuilder.class.getName());
@@ -28,7 +28,7 @@ public class DatasetsBuilder {
      * @param projectName nome del progetto
      * @return 0 se successo, 1 se errore
      */
-    public int build(String projectName){
+    public int build(String projectName) {
         logger.info("Avvio\n");
         GitRepositoryAnalyzer gitRepoAnalyzer = null;
 

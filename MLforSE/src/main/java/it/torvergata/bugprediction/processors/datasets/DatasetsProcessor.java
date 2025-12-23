@@ -13,7 +13,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static it.torvergata.bugprediction.controllers.DatasetsBuilder.RESULTS_DIR;
+import static it.torvergata.bugprediction.controllers.DatasetsBuilder.DATASETS_DIR;
 
 public class DatasetsProcessor {
 
@@ -27,7 +27,7 @@ public class DatasetsProcessor {
                                     OutputFileType extension) throws IOException {
 
         // Directory dei file
-        Path datasetDir = Path.of(RESULTS_DIR)
+        Path datasetDir = Path.of(DATASETS_DIR)
                 .resolve(projName.toLowerCase())
                 .resolve(extension.getId().toLowerCase() + "Files")
                 .resolve(datasetType.getId().toLowerCase());
