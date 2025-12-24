@@ -13,6 +13,8 @@ public class MLSELauncher {
 
     private static final Logger LOGGER = Logger.getLogger(MLSELauncher.class.getName());
 
+    public static final String RESULTS_DIR = "results/";
+
     public static void main(String[] args) {
         setupSystem();
 

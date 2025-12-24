@@ -1,16 +1,19 @@
 package it.torvergata.bugprediction.controllers;
 
 import it.torvergata.bugprediction.models.ClassifierResults;
+import it.torvergata.bugprediction.processors.acume.AcumeProcessor;
 import it.torvergata.bugprediction.processors.weka.WekaProcessor;
 import it.torvergata.bugprediction.utils.Utils;
 
 import java.util.List;
 import java.util.logging.Logger;
 
+import static it.torvergata.bugprediction.MLSELauncher.RESULTS_DIR;
+
 public class WekaResultsBuilder {
 
     private final Logger logger;
-    public static final String WEKA_DIR = "results/weka/";
+    public static final String WEKA_DIR = RESULTS_DIR + "weka/";
 
     public WekaResultsBuilder() {
         logger = Logger.getLogger(WekaResultsBuilder.class.getName());
@@ -33,7 +36,7 @@ public class WekaResultsBuilder {
             wekaProcessor.writeFinalResults(projectName, results);
 
             logger.info("Scrittura dei file ACUME...");
-            ACUMEProcessor acumeProcessor = new ACUMEProcessor(projName);
+            AcumeProcessor acumeProcessor = new AcumeProcessor(projectName);
             acumeProcessor.processACUMEFiles(results);
 
             Utils.printLine(logger);

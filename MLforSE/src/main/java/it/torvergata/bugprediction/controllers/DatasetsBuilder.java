@@ -14,10 +14,12 @@ import it.torvergata.bugprediction.utils.Utils;
 import java.util.List;
 import java.util.logging.Logger;
 
+import static it.torvergata.bugprediction.MLSELauncher.RESULTS_DIR;
+
 public class DatasetsBuilder {
 
     private final Logger logger;
-    public static final String DATASETS_DIR = "results/datasets/";
+    public static final String DATASETS_DIR = RESULTS_DIR + "datasets/";
 
     public DatasetsBuilder() {
         logger = Logger.getLogger(DatasetsBuilder.class.getName());
