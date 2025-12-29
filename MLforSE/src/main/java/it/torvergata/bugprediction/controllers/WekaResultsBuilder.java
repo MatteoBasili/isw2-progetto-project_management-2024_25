@@ -35,7 +35,7 @@ public class WekaResultsBuilder {
             logger.info("Scrittura dei risultati...");
             wekaProcessor.writeFinalResults(projectName, results);
 
-            logger.info("Scrittura dei file ACUME...");
+            logger.info("Scrittura dei file per ACUME...");
             AcumeProcessor acumeProcessor = new AcumeProcessor(projectName);
             acumeProcessor.processACUMEFiles(results);
 

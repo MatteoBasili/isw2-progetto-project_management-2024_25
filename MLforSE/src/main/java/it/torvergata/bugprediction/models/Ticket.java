@@ -33,7 +33,7 @@ public class Ticket {
         if (affectedVersions.isEmpty()) {
             // I ticket con IV nullo saranno quelli da predire
             injectedVersion = null;
-        } else{
+        } else {
             // IV = AV[0] per definizione
             injectedVersion = affectedVersions.get(0);
 

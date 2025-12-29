@@ -34,8 +34,8 @@ public class AcumeProcessor {
 
             trainAndEvaluate(result, training, testing);
 
-            List<AcumeInstance> acumeInstances = buildACUMEInstances(result, testing);
-            processACUMEFile(acumeInstances, result);
+            List<AcumeInstance> acumeInstances = buildAcumeInstances(result, testing);
+            processAcumeFile(acumeInstances, result);
         }
     }
 
@@ -62,7 +62,7 @@ public class AcumeProcessor {
         eval.evaluateModel(classifier, testing);
     }
 
-    private List<AcumeInstance> buildACUMEInstances(ClassifierResults result,
+    private List<AcumeInstance> buildAcumeInstances(ClassifierResults result,
                                                     Instances testing) throws Exception {
         List<AcumeInstance> list = new ArrayList<>();
 
@@ -72,20 +72,18 @@ public class AcumeProcessor {
 
         if (yesBuggyIndex == -1) return list;
 
-        var classifier = result.getCustomClassifier().getClassifier();
-
         for (int i = 0; i < testing.numInstances(); i++) {
             int sizeValue = (int) testing.instance(i).value(sizeIndex);
             int valueIndex = (int) testing.instance(i).value(isBuggyIndex);
             String buggyness =  testing.attribute(isBuggyIndex).value(valueIndex);
-            double[] distribution = classifier.distributionForInstance(testing.instance(i));
+            double[] distribution = result.getCustomClassifier().getClassifier().distributionForInstance(testing.instance(i));
             AcumeInstance acumeInstance = new AcumeInstance(i, sizeValue, distribution[yesBuggyIndex], buggyness);
             list.add(acumeInstance);
         }
         return list;
     }
 
-    private void processACUMEFile(List<AcumeInstance> acumeInstances, ClassifierResults classifierResult) throws IOException {
+    private void processAcumeFile(List<AcumeInstance> acumeInstances, ClassifierResults classifierResult) throws IOException {
         File file = getFile(classifierResult);
 
         try(FileWriter fileWriter = new FileWriter(file)) {

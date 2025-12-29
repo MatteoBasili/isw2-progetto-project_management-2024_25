@@ -7,13 +7,13 @@ import weka.classifiers.Evaluation;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static it.torvergata.bugprediction.controllers.DatasetsBuilder.DATASETS_DIR;
 import static it.torvergata.bugprediction.controllers.WekaResultsBuilder.WEKA_DIR;
@@ -45,6 +45,9 @@ public class WekaProcessor {
             int classIndex = trainingSetInstance.classIndex();
             List<ProjectClassifier> projectClassifiers = classifierFactory.getClassifiers(trainingSetInstance.attributeStats(classIndex));
 
+            // Calcola il numero di release utilizzate nel training set
+            int numTrainingReleases = countTrainingReleasesFromCSV(i);
+
             for (ProjectClassifier projectClassifier : projectClassifiers) {
 
                 // Addestra il modello sul training set
@@ -56,7 +59,7 @@ public class WekaProcessor {
                 evaluator.evaluateModel(classifier, testingSetInstance);
 
                 // Salva i risultati
-                ClassifierResults classifierResults = new ClassifierResults(i, projectClassifier, evaluator);
+                ClassifierResults classifierResults = new ClassifierResults(i, numTrainingReleases, projectClassifier, evaluator);
 
                 // Calcola la percentuale del training set
                 classifierResults.setTrainingPercent(
@@ -96,7 +99,7 @@ public class WekaProcessor {
                         "FALSE_NEGATIVES").append("\n");
                 for (ClassifierResults classifierResults: finalResultsList) {
                     fileWriter.append(projName).append(",")
-                            .append(String.valueOf(classifierResults.getWalkForwardIteration())).append(",")
+                            .append(String.valueOf(classifierResults.getNumTrainingReleases())).append(",")
                             .append(String.valueOf(classifierResults.getTrainingPercent())).append(",")
                             .append(classifierResults.getClassifierName()).append(",");
                     if (classifierResults.hasFeatureSelection()) {
@@ -173,6 +176,38 @@ public class WekaProcessor {
                     .filter(f -> f.toString().endsWith(".arff"))
                     .count();
         }
+    }
+
+    private int countTrainingReleasesFromCSV(int iteration) throws IOException {
+        // Percorso del file CSV di training
+        Path csvPath = Path.of(DATASETS_DIR, projName.toLowerCase(),
+                "csvFiles", "training",
+                projName.toLowerCase() + "_trainingSet" + iteration + ".csv");
+
+        if (!Files.exists(csvPath)) {
+            throw new IOException("CSV training non trovato: " + csvPath.toAbsolutePath());
+        }
+
+        Set<String> uniqueReleases = getUniqueReleases(csvPath);
+        return uniqueReleases.size();
+    }
+
+    private static Set<String> getUniqueReleases(Path csvPath) throws IOException {
+        Set<String> uniqueReleases = new HashSet<>();
+
+        try (BufferedReader br = new BufferedReader(new FileReader(csvPath.toFile()))) {
+            String line;
+            boolean headerSkipped = false;
+            while ((line = br.readLine()) != null) {
+                if (!headerSkipped) { // salta la prima riga di intestazione
+                    headerSkipped = true;
+                    continue;
+                }
+                String[] tokens = line.split(",");
+                uniqueReleases.add(tokens[0]); // assumendo che RELEASE_ID è la prima colonna
+            }
+        }
+        return uniqueReleases;
     }
 
 }

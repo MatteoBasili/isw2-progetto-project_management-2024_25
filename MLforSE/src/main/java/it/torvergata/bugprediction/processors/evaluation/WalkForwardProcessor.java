@@ -26,7 +26,7 @@ public class WalkForwardProcessor {
     private static final Logger LOGGER = Logger.getLogger(WalkForwardProcessor.class.getName());
     private final String projectName;
 
-    private int walkForwardIterations = 0;
+    private int walkForwardIteration = 0;
 
     public WalkForwardProcessor(GitRepositoryAnalyzer gitRepoAnalyzer, String projectName) {
         this.gitRepoAnalyzer = gitRepoAnalyzer;
@@ -45,6 +45,20 @@ public class WalkForwardProcessor {
             List<Commit> consideringCommits = CommitService.getConsideringCommits(commitList, currentRelease);
             List<Commit> consideringTicketedCommits = CommitService.filterAndAssignCommitsToTickets(consideringTickets, consideringCommits);
 
+            // Saltare la release se non c'è nessun ticket
+            if (consideringTickets.isEmpty()) {
+                LOGGER.info("[ATTENZIONE!] Nessun ticket disponibile fino alla release " + currentRelease.getName() + ". Release saltata");
+                continue; // passa alla prossima release
+            }
+
+            // Saltare la release se nessun ticket ha AV
+            boolean hasTicketsWithAV = consideringTickets.stream().anyMatch(Ticket::hasAffectedVersions);
+            if (!hasTicketsWithAV) {
+                LOGGER.info("[ATTENZIONE!] Nessun ticket con affected versions fino alla release "
+                        + currentRelease.getName() + ". Release saltata");
+                continue; // passa alla prossima release
+            }
+
             TicketService.proportionTickets(consideringTickets, consideringReleases, projectName);
             consideringTickets.sort(Comparator.comparing(Ticket::getResolutionDate));
 
@@ -62,7 +76,7 @@ public class WalkForwardProcessor {
     private void processWalkForwardIteration(List<Release> consideringReleaseList,
                                              List<Ticket> consideringTicketList, List<Ticket> allTickets,
                                              List<ReleaseClass> classList, String projName) throws IOException {
-        walkForwardIterations++;
+        walkForwardIteration++;
 
         // L’ultima release non può essere utilizzata come training set, altrimenti non ci sarebbe alcuna release da usare come test set
         List<Release> trainingSetReleaseList = consideringReleaseList.stream()
@@ -91,11 +105,11 @@ public class WalkForwardProcessor {
 
         // Costruisci il set di addestramento per la release corrente
         DatasetsProcessor.writeDataset(projName, trainingSetReleaseList, trainingSetClassList,
-                trainingSetReleaseList.get(trainingSetReleaseList.size() - 1).getNumericId(), DatasetType.TRAINING, OutputFileType.ARFF);
+                walkForwardIteration, DatasetType.TRAINING, OutputFileType.ARFF);
         DatasetsProcessor.writeDataset(projName, trainingSetReleaseList, trainingSetClassList,
-                trainingSetReleaseList.get(trainingSetReleaseList.size() - 1).getNumericId(), DatasetType.TRAINING, OutputFileType.CSV);
+                walkForwardIteration, DatasetType.TRAINING, OutputFileType.CSV);
 
-        if (walkForwardIterations==1) {
+        if (trainingSetReleaseList.size() == 1) {
             loggerString = "Training set costruito sulla prima release";
         } else {
             loggerString = "Training set costruito sulle release da 1 a " + (trainingSetReleaseList.get(trainingSetReleaseList.size() - 1).getNumericId());
@@ -122,10 +136,10 @@ public class WalkForwardProcessor {
 
         // Costruisci il set di test per la release da predire
         DatasetsProcessor.writeDataset(projName, releaseList, predictingClassList,
-                predictingRelease.getNumericId() - 1,
+                walkForwardIteration,
                 DatasetType.TESTING, OutputFileType.ARFF);
         DatasetsProcessor.writeDataset(projName, releaseList, predictingClassList,
-                predictingRelease.getNumericId() - 1,
+                walkForwardIteration,
                 DatasetType.TESTING, OutputFileType.CSV);
 
 

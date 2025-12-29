@@ -4,6 +4,7 @@ import weka.classifiers.Evaluation;
 
 public class ClassifierResults {
     private final int walkForwardIteration;
+    private final int numTrainingReleases;
     private final String classifierName;
     private final boolean hasFeatureSelection;
     private final boolean hasSampling;
@@ -19,8 +20,9 @@ public class ClassifierResults {
     private final double trueNegatives;
     private final double falseNegatives;
 
-    public ClassifierResults(int walkForwardIteration, ProjectClassifier projectClassifier, Evaluation evaluation) {
+    public ClassifierResults(int walkForwardIteration, int numTrainingReleases, ProjectClassifier projectClassifier, Evaluation evaluation) {
         this.walkForwardIteration = walkForwardIteration;
+        this.numTrainingReleases = numTrainingReleases;
         this.projectClassifier = projectClassifier;
         this.classifierName = projectClassifier.getClassifierName();
         this.hasFeatureSelection = (!projectClassifier.getFeatureSelectionFilterName().equals("NoSelection"));
@@ -92,6 +94,10 @@ public class ClassifierResults {
 
     public int getWalkForwardIteration() {
         return walkForwardIteration;
+    }
+
+    public int getNumTrainingReleases() {
+        return numTrainingReleases;
     }
 
     public String getClassifierName() {

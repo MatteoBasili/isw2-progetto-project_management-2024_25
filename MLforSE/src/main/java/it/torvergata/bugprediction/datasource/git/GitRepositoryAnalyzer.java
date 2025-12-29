@@ -98,7 +98,11 @@ public class GitRepositoryAnalyzer {
         List<Ref> refs = git.tagList().call();
 
         for (Ref ref : refs) {
-            if (ref.getName().equals("refs/tags/release-" + releaseName)) {
+            String tagName = ref.getName().replace("refs/tags/", "");
+
+            if (tagName.equals("release-" + releaseName) ||
+                    tagName.equals("v" + releaseName) ||
+                    tagName.equals(releaseName)) {
 
                 try (RevWalk walk = new RevWalk(repository)) {
                     RevObject obj = walk.parseAny(ref.getObjectId());
@@ -127,12 +131,15 @@ public class GitRepositoryAnalyzer {
     public void removeUntaggedReleases(List<Release> releases) throws GitAPIException {
 
         Set<String> tagNames = git.tagList().call().stream()
-                .map(Ref::getName)
+                .map(ref -> ref.getName().replace("refs/tags/", ""))
                 .collect(Collectors.toSet());
 
-        releases.removeIf(release ->
-                !tagNames.contains("refs/tags/release-" + release.getName())
-        );
+        releases.removeIf(release -> {
+            String name = release.getName();
+            return !tagNames.contains("release-" + name) &&
+                    !tagNames.contains("v" + name) &&
+                    !tagNames.contains(name);
+        });
     }
 
     public List<Commit> extractCommits(List<Release> jiraReleases)
