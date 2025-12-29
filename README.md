@@ -19,24 +19,27 @@
 
 Il progetto ha l’obiettivo di analizzare la fattibilità dell’adozione di **modelli di Machine Learning per la predizione di classi buggy**, al fine di supportare e migliorare la fase di testing di grandi applicazioni open-source.
 
-Lo studio si propone di valutare empiricamente se l’impiego di tecniche di **feature selection**, **bilanciamento dei dati** e **classificazione cost-sensitive** consenta di aumentare l’accuratezza dei modelli predittivi. L’idea alla base del lavoro è che l’identificazione preventiva delle classi con maggiore probabilità di contenere difetti possa aiutare i team di testing a prioritizzare le attività di verifica e a ottimizzare l’uso delle risorse disponibili.
+Lo studio valuta empiricamente se l’impiego di tecniche di **feature selection**, **balancing** e **classificazione cost-sensitive** consenta di migliorare l’accuratezza dei modelli. L’identificazione preventiva delle classi ad alto rischio permette ai team di testing di prioritizzare le attività di verifica, ottimizzando le risorse disponibili.
 
-**(DA AGGIORNARE ALLA FINE)** L’analisi è condotta su due progetti open-source, **Apache BookKeeper** e **Apache Storm**, utilizzando dati storici estratti da **GitHub** e **Jira**. L’identificazione delle classi buggy avviene tramite tecniche di SZZ-linking, mentre il labeling dei dati è effettuato mediante la strategia **Proportion (any)**. La valutazione dei modelli segue un approccio di **walk-forward validation**, in modo da simulare uno scenario realistico di utilizzo nel tempo.
+L’analisi è condotta su due progetti open-source, **Apache BookKeeper** e **Apache Storm**, mediante dati storici estratti da **GitHub** e **Jira**, e il labeling delle classi è ottenuto attraverso la strategia **Proportion (Increment)**. La valutazione segue un approccio di **walk-forward validation**, al fine di simulare un contesto d’uso realistico nel tempo.
 
-I modelli di Machine Learning presi in considerazione sono:
+I risultati prodotti dai modelli vengono generati nel formato **ACUME**, per consentire l’analisi quantitativa tramite il relativo tool.  
+Successivamente, gli output sono stati visualizzati mediante boxplot tramite un apposito **Visualizzatore di Risultati**, sviluppato separatamente e reso disponibile su un repository dedicato.
 
-- Random Forest
-- Naive Bayes
-- IBK
+I modelli di Machine Learning considerati sono:
 
-Per ciascun classificatore vengono confrontate diverse configurazioni che combinano **(DA AGGIORNARE ALLA FINE)**:
+- **Random Forest**
+- **Naive Bayes**
+- **IBK**
 
-- feature selection (nessuna selezione vs Best First),
-- tecniche di bilanciamento dei dati (no sampling, over-sampling, under-sampling e SMOTE),
-- approcci cost-sensitive (sensitive threshold e sensitive learning).
+Per ciascun classificatore sono state confrontate configurazioni che combinano:
 
-Gli esperimenti sono implementati utilizzando le API di **WEKA**, al fine di garantire automazione e riproducibilità dei risultati.
-Il codice del progetto rispetta i quality gate di **SonarCloud**, risultando privo di code smells.
+- feature selection (**nessuna selezione** vs **Best-First**)
+- balancing (**no sampling** vs **SMOTE**)
+- approcci cost-sensitive (**no cost-sensitive** vs **cost-sensitive**, con configurazione *CFN = 10 × CFP*)
+
+Gli esperimenti sono stati implementati tramite le API di **WEKA**, garantendo automazione e riproducibilità dei risultati.  
+Il codice è conforme ai quality gate di **SonarCloud**, risultando privo di bug e code smells.
 
 ---
 
@@ -44,3 +47,10 @@ Il codice del progetto rispetta i quality gate di **SonarCloud**, risultando pri
 
 - `MLforSE/` → Codice sorgente
 - `Report/` → Presentazione  
+
+---
+
+## 🔗 Riferimenti
+
+- [ACUME](https://github.com/jonidacarka/ACUME.git)  
+- [Visualizzatore dei Risultati](https://github.com/MatteoBasili/isw2-visualizzatore-risultati-progetto-pm-2024_25)  
