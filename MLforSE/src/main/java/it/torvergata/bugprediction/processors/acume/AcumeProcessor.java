@@ -10,6 +10,8 @@ import weka.core.converters.ConverterUtils;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,12 +45,15 @@ public class AcumeProcessor {
         String type = training ? "training" : "testing";
         String suffix = training ? "_trainingSet" : "_testingSet";
 
-        String path = DATASETS_DIR + projName.toLowerCase()
-                + "/arffFiles/" + type + "/"
-                + projName.toLowerCase() + suffix
-                + result.getWalkForwardIteration() + ".arff";
+        Path path = Paths.get(
+                DATASETS_DIR,
+                projName.toLowerCase(),
+                "arffFiles",
+                type,
+                projName.toLowerCase() + suffix + result.getWalkForwardIteration() + ".arff"
+        );
 
-        Instances data = new ConverterUtils.DataSource(path).getDataSet();
+        Instances data = new ConverterUtils.DataSource(path.toString()).getDataSet();
         data.setClassIndex(data.numAttributes() - 1);
         return data;
     }

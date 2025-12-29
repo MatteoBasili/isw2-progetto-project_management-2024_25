@@ -19,8 +19,14 @@ import static it.torvergata.bugprediction.controllers.DatasetsBuilder.DATASETS_D
 import static it.torvergata.bugprediction.controllers.WekaResultsBuilder.WEKA_DIR;
 
 public class WekaProcessor {
-    private final String projName;
+    private static final String TRAINING_DIR = "training";
+    private static final String TESTING_DIR = "testing";
+    private static final String ARFF_DIR = "arffFiles";
+    private static final String CSV_DIR = "csvFiles";
+    private static final String ARFF_EXTENSION = ".arff";
+    private static final String CSV_EXTENSION = ".csv";
 
+    private final String projName;
     private final int walkForwardIterations; // È il numero di dataset per il progetto considerato
 
     public WekaProcessor(String projName) throws IOException {
@@ -147,14 +153,14 @@ public class WekaProcessor {
 
     private Path trainingPath(int i) {
         return Path.of(DATASETS_DIR, projName.toLowerCase(),
-                "arffFiles", "training",
-                projName.toLowerCase() + "_trainingSet" + i + ".arff");
+                ARFF_DIR, TRAINING_DIR,
+                projName.toLowerCase() + "_trainingSet" + i + ARFF_EXTENSION);
     }
 
     private Path testingPath(int i) {
         return Path.of(DATASETS_DIR, projName.toLowerCase(),
-                "arffFiles", "testing",
-                projName.toLowerCase() + "_testingSet" + i + ".arff");
+                ARFF_DIR, TESTING_DIR,
+                projName.toLowerCase() + "_testingSet" + i + ARFF_EXTENSION);
     }
 
     /**
@@ -163,8 +169,8 @@ public class WekaProcessor {
     private static int countDatasets(String projName) throws IOException {
         Path trainingDir = Path.of(DATASETS_DIR)
                 .resolve(projName.toLowerCase())
-                .resolve("arffFiles")
-                .resolve("training");
+                .resolve(ARFF_DIR)
+                .resolve(TRAINING_DIR);
 
         if (!Files.exists(trainingDir) || !Files.isDirectory(trainingDir)) {
             throw new IOException("Cartella di training non trovata: " + trainingDir.toAbsolutePath());
@@ -173,7 +179,7 @@ public class WekaProcessor {
         try (var files = Files.list(trainingDir)) {
             return (int) files
                     .filter(Files::isRegularFile)
-                    .filter(f -> f.toString().endsWith(".arff"))
+                    .filter(f -> f.toString().endsWith(ARFF_EXTENSION))
                     .count();
         }
     }
@@ -181,8 +187,8 @@ public class WekaProcessor {
     private int countTrainingReleasesFromCSV(int iteration) throws IOException {
         // Percorso del file CSV di training
         Path csvPath = Path.of(DATASETS_DIR, projName.toLowerCase(),
-                "csvFiles", "training",
-                projName.toLowerCase() + "_trainingSet" + iteration + ".csv");
+                CSV_DIR, TRAINING_DIR,
+                projName.toLowerCase() + "_trainingSet" + iteration + CSV_EXTENSION);
 
         if (!Files.exists(csvPath)) {
             throw new IOException("CSV training non trovato: " + csvPath.toAbsolutePath());

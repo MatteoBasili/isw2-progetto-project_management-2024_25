@@ -35,42 +35,51 @@ public class WalkForwardProcessor {
 
     public void executeWalkForward(List<Release> datasetReleases, List<Ticket> ticketList, List<Commit> commitList, List<Ticket> allTickets) throws IOException {
         for (Release currentRelease : datasetReleases) {
-            if (currentRelease.getNumericId() == 1) continue; // Salta la prima release
+            if (currentRelease.getNumericId() != 1) {  // Salta la prima release
+                Utils.printLine(LOGGER);
+                logStep(currentRelease, datasetReleases.size());
 
-            Utils.printLine(LOGGER);
-            logStep(currentRelease, datasetReleases.size());
+                List<Release> consideringReleases = ReleaseService.getConsideringReleases(datasetReleases, currentRelease);
+                List<Ticket> consideringTickets = TicketService.getConsideringTickets(ticketList, currentRelease);
+                List<Commit> consideringCommits = CommitService.getConsideringCommits(commitList, currentRelease);
+                List<Commit> consideringTicketedCommits = CommitService.filterAndAssignCommitsToTickets(consideringTickets, consideringCommits);
 
-            List<Release> consideringReleases = ReleaseService.getConsideringReleases(datasetReleases, currentRelease);
-            List<Ticket> consideringTickets = TicketService.getConsideringTickets(ticketList, currentRelease);
-            List<Commit> consideringCommits = CommitService.getConsideringCommits(commitList, currentRelease);
-            List<Commit> consideringTicketedCommits = CommitService.filterAndAssignCommitsToTickets(consideringTickets, consideringCommits);
+                if (shouldSkipRelease(currentRelease, consideringTickets)) {
+                    continue;  // passa alla prossima release
+                }
 
-            // Saltare la release se non c'è nessun ticket
-            if (consideringTickets.isEmpty()) {
-                LOGGER.info("[ATTENZIONE!] Nessun ticket disponibile fino alla release " + currentRelease.getName() + ". Release saltata");
-                continue; // passa alla prossima release
+                TicketService.proportionTickets(consideringTickets, consideringReleases, projectName);
+                consideringTickets.sort(Comparator.comparing(Ticket::getResolutionDate));
+
+                List<ReleaseClass> classList = gitRepoAnalyzer.extractClasses(consideringReleases, consideringCommits);
+
+                MetricsProcessor metricsProcessor = new MetricsProcessor(consideringReleases, consideringTicketedCommits,
+                        classList, gitRepoAnalyzer, projectName);
+                metricsProcessor.processMetrics();
+
+                processWalkForwardIteration(
+                        consideringReleases, consideringTickets, allTickets, classList, projectName);
             }
-
-            // Saltare la release se nessun ticket ha AV
-            boolean hasTicketsWithAV = consideringTickets.stream().anyMatch(Ticket::hasAffectedVersions);
-            if (!hasTicketsWithAV) {
-                LOGGER.info("[ATTENZIONE!] Nessun ticket con affected versions fino alla release "
-                        + currentRelease.getName() + ". Release saltata");
-                continue; // passa alla prossima release
-            }
-
-            TicketService.proportionTickets(consideringTickets, consideringReleases, projectName);
-            consideringTickets.sort(Comparator.comparing(Ticket::getResolutionDate));
-
-            List<ReleaseClass> classList = gitRepoAnalyzer.extractClasses(consideringReleases, consideringCommits);
-
-            MetricsProcessor metricsProcessor = new MetricsProcessor(consideringReleases, consideringTicketedCommits,
-                    classList, gitRepoAnalyzer, projectName);
-            metricsProcessor.processMetrics();
-
-            processWalkForwardIteration(
-                    consideringReleases, consideringTickets, allTickets, classList, projectName);
         }
+    }
+
+    private boolean shouldSkipRelease(Release currentRelease,List<Ticket> consideringTickets) {
+
+        // Saltare la release se non c'è nessun ticket
+        if (consideringTickets.isEmpty()) {
+            LOGGER.info("[ATTENZIONE!] Nessun ticket disponibile fino alla release " + currentRelease.getName() + ". Release saltata");
+            return true;
+        }
+
+        // Saltare la release se nessun ticket ha AV
+        boolean hasTicketsWithAV = consideringTickets.stream().anyMatch(Ticket::hasAffectedVersions);
+        if (!hasTicketsWithAV) {
+            LOGGER.info("[ATTENZIONE!] Nessun ticket con affected versions fino alla release "
+                    + currentRelease.getName() + ". Release saltata");
+            return true;
+        }
+
+        return false;
     }
 
     private void processWalkForwardIteration(List<Release> consideringReleaseList,
