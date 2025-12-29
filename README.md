@@ -53,4 +53,4 @@ Il codice è conforme ai quality gate di **SonarCloud**, risultando privo di bug
 ## 🔗 Riferimenti
 
 - [ACUME](https://github.com/jonidacarka/ACUME.git)  
-- [Visualizzatore dei Risultati](https://github.com/MatteoBasili/isw2-visualizzatore-risultati-progetto-pm-2024_25)  
+- [Visualizzatore dei risultati](https://github.com/MatteoBasili/isw2-visualizzatore-risultati-progetto-pm-2024_25)  
